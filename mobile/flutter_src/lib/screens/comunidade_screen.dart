@@ -6,10 +6,7 @@ class ComunidadeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final boxDecoration = BoxDecoration(
-      border: Border.all(
-        color: Theme.of(context).primaryColor,
-        width: 2,
-      ),
+      border: Border.all(color: Theme.of(context).primaryColor, width: 2),
       color: Colors.white,
     );
 
@@ -23,15 +20,14 @@ class ComunidadeScreen extends StatelessWidget {
             children: [
               const Text(
                 'Placeholder Title',
-                style: TextStyle(
-                  fontSize: 20, 
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Center( // Centraliza o quadrado
+              Center(
+                // Centraliza o quadrado
                 child: Container(
-                  width: 350, // Largura fixa de 200px (ajuste conforme necessário)
+                  width:
+                      350, // Largura fixa de 200px (ajuste conforme necessário)
                   height: 200,
                   decoration: boxDecoration,
                 ),

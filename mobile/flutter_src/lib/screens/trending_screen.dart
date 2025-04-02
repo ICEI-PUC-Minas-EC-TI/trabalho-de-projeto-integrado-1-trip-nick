@@ -52,11 +52,8 @@ class PlaceholderGrid extends StatelessWidget {
   final int count;
   final int columns;
 
-  const PlaceholderGrid({
-    Key? key,
-    required this.count,
-    required this.columns,
-  }) : super(key: key);
+  const PlaceholderGrid({Key? key, required this.count, required this.columns})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -82,4 +79,3 @@ class PlaceholderGrid extends StatelessWidget {
     );
   }
 }
-

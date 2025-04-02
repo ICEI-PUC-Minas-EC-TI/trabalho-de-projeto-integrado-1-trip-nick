@@ -22,34 +22,22 @@ class MinhasViagensScreen extends StatelessWidget {
           // 1) Primeiro bloco
           const Text(
             'Placeholder Title',
-            style: TextStyle(
-              fontSize: 20, 
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 0),
           // 3 quadrados em uma só linha
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 120,
-                  decoration: boxDecoration,
-                ),
+                child: Container(height: 120, decoration: boxDecoration),
               ),
               const SizedBox(width: 0),
               Expanded(
-                child: Container(
-                  height: 120,
-                  decoration: boxDecoration,
-                ),
+                child: Container(height: 120, decoration: boxDecoration),
               ),
               const SizedBox(width: 0),
               Expanded(
-                child: Container(
-                  height: 120,
-                  decoration: boxDecoration,
-                ),
+                child: Container(height: 120, decoration: boxDecoration),
               ),
             ],
           ),
@@ -67,27 +55,18 @@ class MinhasViagensScreen extends StatelessWidget {
           // 2) Segundo bloco
           const Text(
             'Placeholder Title',
-            style: TextStyle(
-              fontSize: 20, 
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 0),
           // 2 quadrados em uma só linha
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 120,
-                  decoration: boxDecoration,
-                ),
+                child: Container(height: 120, decoration: boxDecoration),
               ),
               const SizedBox(width: 0),
               Expanded(
-                child: Container(
-                  height: 120,
-                  decoration: boxDecoration,
-                ),
+                child: Container(height: 120, decoration: boxDecoration),
               ),
             ],
           ),
@@ -105,4 +84,3 @@ class MinhasViagensScreen extends StatelessWidget {
     );
   }
 }
-

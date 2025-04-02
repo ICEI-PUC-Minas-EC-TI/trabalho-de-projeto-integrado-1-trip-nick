@@ -69,10 +69,7 @@ class MenuScreen extends StatelessWidget {
       leading: Icon(icon, color: Colors.grey[700]),
       title: Text(
         title,
-        style: TextStyle(
-          color: Colors.grey[700],
-          fontSize: 16,
-        ),
+        style: TextStyle(color: Colors.grey[700], fontSize: 16),
       ),
       onTap: () {
         Navigator.pop(context);
