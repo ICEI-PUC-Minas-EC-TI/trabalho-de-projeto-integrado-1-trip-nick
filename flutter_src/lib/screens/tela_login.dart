@@ -59,7 +59,7 @@ class TelaLogin extends StatelessWidget {
                       ),
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: 'Username our E-mail',
+                          hintText: 'Username or E-mail',
                           prefixIcon: Icon(
                             Icons.person_outline,
                             color: Colors.green[800],

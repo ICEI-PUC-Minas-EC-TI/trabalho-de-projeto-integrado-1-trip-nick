@@ -40,7 +40,7 @@ class ColorAliases {
   static const Color successDefault = ColorPalette.green400;
   static const Color success500 = ColorPalette.green500;
   static const Color success600 = ColorPalette.green600;
-  static const Color success700 = ColorPalette.green700
+  static const Color success700 = ColorPalette.green700;
 
   // Warning colors
   static const Color warning100 = ColorPalette.orange100;
