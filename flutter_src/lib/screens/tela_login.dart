@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'tela_registro.dart';
 import '../home_page.dart';
+import '../design_system/colors/ui_colors.dart';
+import '../design_system/colors/color_aliases.dart';
 
 class TelaLogin extends StatelessWidget {
   const TelaLogin({Key? key}) : super(key: key);
@@ -8,225 +10,198 @@ class TelaLogin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Fundo com formas onduladas (em cima e embaixo)
-          CustomPaint(
-            size: Size(
-              MediaQuery.of(context).size.width,
-              MediaQuery.of(context).size.height,
-            ),
-            painter: FundoOndulado(),
-          ),
+      backgroundColor: UIColors.surfacePrimary,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 80),
 
-          // Conteúdo
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 80),
-
-                    // Título LOGIN (centralizado)
-                    Text(
-                      'LOGIN',
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green[700],
-                        letterSpacing: 3,
-                      ),
-                    ),
-
-                    const SizedBox(height: 60),
-
-                    // Campo de usuário
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            // ignore: deprecated_member_use
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Username or E-mail',
-                          prefixIcon: Icon(
-                            Icons.person_outline,
-                            color: Colors.green[800],
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 15,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Campo de senha
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            // ignore: deprecated_member_use
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          hintText: 'Password',
-                          prefixIcon: Icon(
-                            Icons.lock_outline,
-                            color: Colors.green[800],
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 15,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Botão de Login (texto em branco)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => HomePage()),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: const Text(
-                          'Login',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white, // Cor do texto em branco
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Link para registro
-                    Center(
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RegisterScreen(),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Create Account',
-                          style: TextStyle(
-                            color: Colors.green[800],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                // App logo placeholder
+                Container(
+                  height: 120,
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  decoration: BoxDecoration(
+                    color: ColorAliases.primaryDefault,
+                    borderRadius: BorderRadius.circular(60),
+                  ),
+                  child: const Icon(
+                    Icons.travel_explore,
+                    size: 60,
+                    color: UIColors.iconOnAction,
+                  ),
                 ),
-              ),
+
+                const SizedBox(height: 32),
+
+                // App title
+                Text(
+                  'Trip Nick',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    color: ColorAliases.primaryDefault,
+                    letterSpacing: 2,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Subtitle
+                Text(
+                  'Descubra, explore e compartilhe',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: UIColors.textDisabled,
+                  ),
+                ),
+
+                const SizedBox(height: 48),
+
+                // Login form
+                _buildLoginForm(context),
+
+                const SizedBox(height: 24),
+
+                // Create account link
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(
+                          builder: (context) => RegisterScreen(),
+                        ),
+                      );
+                    },
+                    child: RichText(
+                      text: TextSpan(
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        children: [
+                          TextSpan(
+                            text: 'Não tem uma conta? ',
+                            style: TextStyle(color: UIColors.textBody),
+                          ),
+                          TextSpan(
+                            text: 'Criar conta',
+                            style: TextStyle(
+                              color: UIColors.textAction,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
-}
 
-// CustomPainter para criar o fundo ondulado
-class FundoOndulado extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    // ignore: deprecated_member_use
-    Paint paint = Paint()..color = Colors.green.withOpacity(0.7);
+  Widget _buildLoginForm(BuildContext context) {
+    return Column(
+      children: [
+        // Username/Email field
+        TextField(
+          decoration: const InputDecoration(
+            labelText: 'E-mail ou usuário',
+            hintText: 'Digite seu e-mail ou nome de usuário',
+            prefixIcon: Icon(Icons.person_outline),
+          ),
+          keyboardType: TextInputType.emailAddress,
+        ),
 
-    Path path = Path();
+        const SizedBox(height: 16),
 
-    // Onda superior
-    path.moveTo(0, size.height * 0.3); // Início da onda superior
+        // Password field
+        TextField(
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'Senha',
+            hintText: 'Digite sua senha',
+            prefixIcon: Icon(Icons.lock_outline),
+            suffixIcon: Icon(Icons.visibility_off_outlined),
+          ),
+        ),
 
-    path.quadraticBezierTo(
-      size.width * 0.25,
-      size.height * 0.2,
-      size.width * 0.5,
-      size.height * 0.3,
+        const SizedBox(height: 8),
+
+        // Forgot password link
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () {
+              // TODO: Implement forgot password
+            },
+            child: Text(
+              'Esqueceu a senha?',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: UIColors.textAction,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Login button
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.pushReplacement(context, MaterialPageRoute(
+                  builder: (context) => const HomePage()
+                ),
+              );
+            },
+            child: const Text('Entrar'),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Divider
+        Row(
+          children: [
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'ou',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const Expanded(child: Divider()),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Social login buttons
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              // TODO: Implement Google login
+            },
+            icon: const Icon(Icons.g_mobiledata, size: 24),
+            label: const Text('Continuar com Google'),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: UIColors.borderPrimary),
+              foregroundColor: UIColors.textBody,
+            ),
+          ),
+        ),
+      ],
     );
-
-    path.quadraticBezierTo(
-      size.width * 0.75,
-      size.height * 0.4,
-      size.width,
-      size.height * 0.3,
-    );
-
-    // Fecha o caminho até o topo da tela
-    path.lineTo(size.width, 0);
-    path.lineTo(0, 0);
-    path.close();
-
-    canvas.drawPath(path, paint);
-
-    // Onda inferior
-    path.reset(); // Limpa o caminho
-
-    path.moveTo(0, size.height * 0.7); // Início da onda inferior
-
-    path.quadraticBezierTo(
-      size.width * 0.25,
-      size.height * 0.8,
-      size.width * 0.5,
-      size.height * 0.7,
-    );
-
-    path.quadraticBezierTo(
-      size.width * 0.75,
-      size.height * 0.6,
-      size.width,
-      size.height * 0.7,
-    );
-
-    // Fecha o caminho até o fundo da tela
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-
-    canvas.drawPath(path, paint);
   }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

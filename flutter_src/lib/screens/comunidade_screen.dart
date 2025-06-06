@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'post_screen.dart'; // Import to use the PostScreen
+import 'post_screen.dart';
+import '../design_system/colors/ui_colors.dart';
+import '../design_system/colors/color_aliases.dart';
 
 class ComunidadeScreen extends StatelessWidget {
   const ComunidadeScreen({Key? key}) : super(key: key);
@@ -11,21 +13,21 @@ class ComunidadeScreen extends StatelessWidget {
       {
         'title': 'Minha viagem à Serra do Cipó',
         'username': 'aventureiro123',
-        'imageUrl': '', // Empty for placeholder
+        'imageUrl': '',
         'description': 'Compartilhando minha experiência incrível na Serra do Cipó. Trilhas maravilhosas, cachoeiras deslumbrantes e muita natureza preservada. Recomendo para quem busca aventura e tranquilidade ao mesmo tempo.',
         'datePosted': DateTime(2025, 5, 1),
       },
       {
         'title': 'Fernando de Noronha - Paraíso Brasileiro',
         'username': 'mariasantos',
-        'imageUrl': '', // Empty for placeholder
+        'imageUrl': '',
         'description': 'Um dos lugares mais incríveis que já visitei! Águas cristalinas, praias desertas e uma experiência de mergulho indescritível. Vale cada centavo investido na viagem.',
         'datePosted': DateTime(2025, 4, 28),
       },
       {
         'title': 'Fim de semana em Bonito-MS',
         'username': 'joaoviajante',
-        'imageUrl': '', // Empty for placeholder
+        'imageUrl': '',
         'description': 'Passei um final de semana em Bonito e fiquei impressionado com a transparência das águas dos rios. Flutuação, mergulho e caminhadas em meio à natureza fizeram desta uma viagem memorável.',
         'datePosted': DateTime(2025, 4, 15),
       },
@@ -36,11 +38,12 @@ class ComunidadeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          // Screen title using theme
+          Text(
             'Comunidade',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.displayMedium,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
           // Lista de posts da comunidade
           ListView.builder(
@@ -56,7 +59,6 @@ class ComunidadeScreen extends StatelessWidget {
                 description: post['description'],
                 datePosted: post['datePosted'],
                 onTap: () {
-                  // Navegar para a tela de detalhes do post
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -99,120 +101,117 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final boxDecoration = BoxDecoration(
-      border: Border.all(color: Theme.of(context).primaryColor, width: 2),
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
-    );
-
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabeçalho do post com nome de usuário
+            // Post header with user info
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: Theme.of(context).primaryColor,
+                    backgroundColor: ColorAliases.primaryDefault,
                     child: Text(
                       username.substring(0, 1).toUpperCase(),
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: UIColors.textOnAction,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        username,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          username,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Text(
-                        _formatDate(datePosted),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                        Text(
+                          _formatDate(datePosted),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // Título do post
+            // Post title
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
             ),
 
             const SizedBox(height: 12),
 
-            // Imagem do post
+            // Post image
             Container(
               width: double.infinity,
               height: 200,
-              decoration: boxDecoration,
               margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border.all(color: UIColors.borderPrimary),
+                borderRadius: BorderRadius.circular(4),
+                color: ColorAliases.neutral100,
+              ),
               child: imageUrl.isNotEmpty
-                  ? Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
+                  ? ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 40,
+                        color: UIColors.iconPrimary,
+                      ),
+                    );
+                  },
+                ),
               )
-                  : Center(
+                  : const Center(
                 child: Icon(
-                  Icons.photo,
-                  size: 64,
-                  color: Theme.of(context).primaryColor.withOpacity(0.5),
+                  Icons.image,
+                  size: 40,
+                  color: UIColors.iconPrimary,
                 ),
               ),
             ),
 
-            // Descrição do post (prévia)
+            // Post description preview
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(
-                description.length > 120
-                    ? '${description.substring(0, 120)}...'
-                    : description,
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-
-            // Botão para ler mais
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextButton(
-                    onPressed: onTap,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Theme.of(context).primaryColor,
+                  Text(
+                    description.length > 120
+                        ? '${description.substring(0, 120)}...'
+                        : description,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  // Read more button
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: onTap,
+                      child: const Text('Ler mais'),
                     ),
-                    child: const Text('Ler mais'),
                   ),
                 ],
               ),
@@ -223,7 +222,6 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  // Helper method to format the date
   String _formatDate(DateTime date) {
     final months = [
       'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
