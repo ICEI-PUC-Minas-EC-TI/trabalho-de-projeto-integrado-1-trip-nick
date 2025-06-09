@@ -7,6 +7,17 @@ import 'package:card_swiper/card_swiper.dart';
 class TrendingScreen extends StatelessWidget {
   const TrendingScreen({Key? key}) : super(key: key);
 
+  // Sample data for Swiper cards
+  static const Map<String, dynamic> swiperSampleData = {
+    'name': 'Igreja Matriz de Nossa Senhora da Conceição',
+    'imageUrl': 'https://store321307560.blob.core.windows.net/images/pompeu.jpg',
+    'country': 'Brasil',
+    'city': 'Pompéu',
+    'category': 'Igreja',
+    'description': 'Igreja histórica no centro da cidade de Pompéu, Minas Gerais.',
+    'rating': 4.7,
+  };
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -84,12 +95,30 @@ class TrendingScreen extends StatelessWidget {
           height: 200, // Set a fixed height for the swiper
           child: Swiper(
             itemBuilder: (BuildContext context, int index) {
-              return ClipRRect(
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TouristSpotScreen(
+                        name: swiperSampleData['name'],
+                        imageUrl: swiperSampleData['imageUrl'],
+                        country: swiperSampleData['country'],
+                        city: swiperSampleData['city'],
+                        category: swiperSampleData['category'],
+                        description: swiperSampleData['description'],
+                        rating: swiperSampleData['rating'],
+                      ),
+                    ),
+                  );
+                },
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(10.0), // Adjust the radius as needed
                   child: Image.network(
-                  "https://store321307560.blob.core.windows.net/images/pompeu.jpg",
-                  fit: BoxFit.fill,
+                    swiperSampleData['imageUrl'],
+                    fit: BoxFit.fill,
                   ),
+                ),
               );
             },
             itemCount: count, // Use the count parameter
@@ -104,217 +133,6 @@ class TrendingScreen extends StatelessWidget {
 
         const SizedBox(height: 16),
       ],
-    );
-  }
-}
-
-class PlaceholderGrid extends StatelessWidget {
-  final int count;
-  final int columns;
-  final BuildContext context;
-
-  const PlaceholderGrid({
-    Key? key,
-    required this.count,
-    required this.columns,
-    required this.context,
-  }) : super(key: key);
-
-  Map<String, dynamic> getSampleData(int index) {
-    final List<Map<String, dynamic>> sampleSpots = [
-      {
-        'name': 'Praia do Rosa',
-        'imageUrl': '',
-        'country': 'Brasil',
-        'city': 'Imbituba',
-        'category': 'Praia',
-        'description': 'Uma bela praia localizada no sul de Santa Catarina, conhecida por suas águas cristalinas e belezas naturais.',
-        'rating': 4.8,
-      },
-      {
-        'name': 'Serra do Cipó',
-        'imageUrl': '',
-        'country': 'Brasil',
-        'city': 'Santana do Riacho',
-        'category': 'Montanha',
-        'description': 'Parque nacional com belas cachoeiras, trilhas e formações rochosas únicas.',
-        'rating': 4.6,
-      },
-      {
-        'name': 'Fernando de Noronha',
-        'imageUrl': '',
-        'country': 'Brasil',
-        'city': 'Fernando de Noronha',
-        'category': 'Ilha',
-        'description': 'Arquipélago paradisíaco com praias de águas cristalinas e rica vida marinha.',
-        'rating': 4.9,
-      },
-      {
-        'name': 'Chapada dos Veadeiros',
-        'imageUrl': '',
-        'country': 'Brasil',
-        'city': 'Alto Paraíso de Goiás',
-        'category': 'Parque Nacional',
-        'description': 'Área de conservação com belas cachoeiras, cânions e formações rochosas antigas.',
-        'rating': 4.7,
-      },
-      {
-        'name': 'Bonito',
-        'imageUrl': '',
-        'country': 'Brasil',
-        'city': 'Bonito',
-        'category': 'Ecoturismo',
-        'description': 'Destino famoso pelas águas cristalinas, grutas e atividades de ecoturismo.',
-        'rating': 4.5,
-      },
-      {
-        'name': 'Lençóis Maranhenses',
-        'imageUrl': '',
-        'country': 'Brasil',
-        'city': 'Barreirinhas',
-        'category': 'Parque Nacional',
-        'description': 'Paisagem única com dunas de areia branca e lagoas de água doce cristalina.',
-        'rating': 4.8,
-      },
-    ];
-
-    return sampleSpots[index % sampleSpots.length];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: columns,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 0.85,
-      children: List.generate(
-        count,
-            (index) => _buildSpotCard(context, index),
-      ),
-    );
-  }
-
-  Widget _buildSpotCard(BuildContext context, int index) {
-    final spotData = getSampleData(index);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: ColorAliases.white,
-        border: Border.all(color: UIColors.borderPrimary),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  TouristSpotScreen(
-                    name: spotData['name'],
-                    imageUrl: spotData['imageUrl'],
-                    country: spotData['country'],
-                    city: spotData['city'],
-                    category: spotData['category'],
-                    description: spotData['description'],
-                    rating: spotData['rating'],
-                  ),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image placeholder
-              Expanded(
-                flex: 3,
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: ColorAliases.neutral100,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: UIColors.borderPrimary),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.image,
-                      size: 32,
-                      color: UIColors.iconPrimary,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Spot name
-              Expanded(
-                flex: 1,
-                child: Text(
-                  spotData['name'],
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-
-              const SizedBox(height: 4),
-
-              // Location and rating
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${spotData['city']}, ${spotData['country']}',
-                      style: Theme
-                          .of(context)
-                          .textTheme
-                          .bodySmall,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.star,
-                    size: 14,
-                    color: ColorAliases.warningDefault,
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    spotData['rating'].toString(),
-                    style: Theme
-                        .of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

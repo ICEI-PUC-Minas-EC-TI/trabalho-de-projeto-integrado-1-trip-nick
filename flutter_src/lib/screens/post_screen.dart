@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../design_system/colors/color_aliases.dart';
 import '../design_system/colors/ui_colors.dart';
-import 'trending_screen.dart'; // Importing for PlaceholderGrid
 
 class PostScreen extends StatelessWidget {
   final String username;
@@ -151,8 +150,25 @@ class PostScreen extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // Related places grid (non-interactive as specified)
-              PlaceholderGrid(count: 4, columns: 4, context: context),
+              // Simple box placeholder for related places
+              Container(
+                width: double.infinity,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: ColorAliases.neutral100,
+                  border: Border.all(color: UIColors.borderPrimary),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Center(
+                  child: Text(
+                    'Related places will be shown here',
+                    style: TextStyle(
+                      color: UIColors.textDisabled,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

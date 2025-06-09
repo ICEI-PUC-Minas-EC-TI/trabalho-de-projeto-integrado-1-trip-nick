@@ -36,6 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_custom_carousel: ^0.1.0+1
   card_swiper: ^3.0.1
+  json_annotation: ^4.9.0
+  json_serializable: ^6.9.5
+  build_runner: ^2.4.15
 
 dev_dependencies:
   flutter_test:
