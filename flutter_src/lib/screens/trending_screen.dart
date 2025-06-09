@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'spot_screen.dart';
 import '../design_system/colors/ui_colors.dart';
 import '../design_system/colors/color_aliases.dart';
-import 'package:flutter_custom_carousel/flutter_custom_carousel.dart';
+import 'package:card_swiper/card_swiper.dart';
 
 class TrendingScreen extends StatelessWidget {
   const TrendingScreen({Key? key}) : super(key: key);
@@ -27,7 +27,6 @@ class TrendingScreen extends StatelessWidget {
             title: 'Perto de Você',
             subtitle: 'Destinos incríveis próximos à sua localização',
             count: 4,
-            columns: 2,
           ),
 
           const SizedBox(height: 32),
@@ -38,7 +37,6 @@ class TrendingScreen extends StatelessWidget {
             title: 'Popular',
             subtitle: 'Os destinos mais visitados pelos viajantes',
             count: 6,
-            columns: 3,
           ),
 
           const SizedBox(height: 32),
@@ -49,7 +47,6 @@ class TrendingScreen extends StatelessWidget {
             title: 'Recomendações Sazonais',
             subtitle: 'Perfeito para a época atual do ano',
             count: 4,
-            columns: 2,
           ),
         ],
       ),
@@ -61,7 +58,6 @@ class TrendingScreen extends StatelessWidget {
     required String title,
     required String subtitle,
     required int count,
-    required int columns,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,11 +79,27 @@ class TrendingScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Grid
-        PlaceholderGrid(
-          count: count,
-          columns: columns,
-          context: context,
+        // Card Swiper
+        SizedBox(
+          height: 200, // Set a fixed height for the swiper
+          child: Swiper(
+            itemBuilder: (BuildContext context, int index) {
+              return ClipRRect(
+                  borderRadius: BorderRadius.circular(10.0), // Adjust the radius as needed
+                  child: Image.network(
+                  "https://store321307560.blob.core.windows.net/images/pompeu.jpg",
+                  fit: BoxFit.fill,
+                  ),
+              );
+            },
+            itemCount: count, // Use the count parameter
+            pagination: SwiperPagination(),
+            control: SwiperControl(),
+            viewportFraction: 0.6,
+            scale: 0.9,
+            curve: Curves.easeInOut,
+            transformer: ScaleAndFadeTransformer(),
+          ),
         ),
 
         const SizedBox(height: 16),
