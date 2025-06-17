@@ -35,7 +35,7 @@ class CommunityPost extends Post {
 
   /// Converts this CommunityPost instance to JSON
   @override
-  Map<String, dynamic> toJson() => _$CommunityPostToJson(this);
+    Map<String, dynamic> toJson() => _$CommunityPostToJson(this);
 
   /// Helper method to check if post has an associated list
   bool get hasList => list != null;
