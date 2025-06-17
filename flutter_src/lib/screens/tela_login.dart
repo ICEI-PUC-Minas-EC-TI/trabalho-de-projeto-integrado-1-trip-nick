@@ -1,11 +1,68 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 import 'tela_registro.dart';
 import '../home_page.dart';
 import '../design_system/colors/ui_colors.dart';
 import '../design_system/colors/color_aliases.dart';
 
-class TelaLogin extends StatelessWidget {
+class TelaLogin extends StatefulWidget {
   const TelaLogin({Key? key}) : super(key: key);
+
+  @override
+  State<TelaLogin> createState() => _TelaLoginState();
+}
+
+class _TelaLoginState extends State<TelaLogin> {
+  final TextEditingController _emailUsernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  void _signInWithEmailPassword() async {
+    String input = _emailUsernameController.text.trim();
+    String password = _passwordController.text.trim();
+
+    try {
+      String email = input;
+      // Checar se o usuário digitou um nome de usuário (simplesmente detectar se não é um email válido)
+      if (!email.contains('@')) {
+        throw FirebaseAuthException(
+          code: 'invalid-email',
+          message: 'Digite um e-mail válido.',
+        );
+      }
+
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) return; // usuário cancelou
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await _auth.signInWithCredential(credential);
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,12 +73,8 @@ class TelaLogin extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 80),
-
-                // App logo placeholder
                 Container(
                   height: 120,
                   margin: const EdgeInsets.symmetric(horizontal: 40),
@@ -35,67 +88,47 @@ class TelaLogin extends StatelessWidget {
                     color: UIColors.iconOnAction,
                   ),
                 ),
-
                 const SizedBox(height: 32),
-
-                // App title
                 Text(
                   'Trip Nick',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    color: ColorAliases.primaryDefault,
-                    letterSpacing: 2,
-                  ),
+                        color: ColorAliases.primaryDefault,
+                        letterSpacing: 2,
+                      ),
                 ),
-
                 const SizedBox(height: 8),
-
-                // Subtitle
                 Text(
                   'Descubra, explore e compartilhe',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: UIColors.textDisabled,
-                  ),
+                        color: UIColors.textDisabled,
+                      ),
                 ),
-
                 const SizedBox(height: 48),
-
-                // Login form
                 _buildLoginForm(context),
-
                 const SizedBox(height: 24),
-
-                // Create account link
                 Center(
                   child: TextButton(
                     onPressed: () {
                       Navigator.push(context, MaterialPageRoute(
-                          builder: (context) => RegisterScreen(),
-                        ),
-                      );
+                        builder: (context) => RegisterScreen(),
+                      ));
                     },
                     child: RichText(
                       text: TextSpan(
                         style: Theme.of(context).textTheme.bodyMedium,
                         children: [
-                          TextSpan(
-                            text: 'Não tem uma conta? ',
-                            style: TextStyle(color: UIColors.textBody),
-                          ),
+                          TextSpan(text: 'Não tem uma conta? ', style: TextStyle(color: UIColors.textBody)),
                           TextSpan(
                             text: 'Criar conta',
-                            style: TextStyle(
-                              color: UIColors.textAction,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: TextStyle(color: UIColors.textAction, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 40),
               ],
             ),
@@ -108,8 +141,8 @@ class TelaLogin extends StatelessWidget {
   Widget _buildLoginForm(BuildContext context) {
     return Column(
       children: [
-        // Username/Email field
         TextField(
+          controller: _emailUsernameController,
           decoration: const InputDecoration(
             labelText: 'E-mail ou usuário',
             hintText: 'Digite seu e-mail ou nome de usuário',
@@ -117,11 +150,9 @@ class TelaLogin extends StatelessWidget {
           ),
           keyboardType: TextInputType.emailAddress,
         ),
-
         const SizedBox(height: 16),
-
-        // Password field
         TextField(
+          controller: _passwordController,
           obscureText: true,
           decoration: const InputDecoration(
             labelText: 'Senha',
@@ -130,69 +161,40 @@ class TelaLogin extends StatelessWidget {
             suffixIcon: Icon(Icons.visibility_off_outlined),
           ),
         ),
-
         const SizedBox(height: 8),
-
-        // Forgot password link
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: () {
-              // TODO: Implement forgot password
-            },
-            child: Text(
-              'Esqueceu a senha?',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: UIColors.textAction,
-              ),
-            ),
+            onPressed: () {},
+            child: Text('Esqueceu a senha?', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: UIColors.textAction)),
           ),
         ),
-
         const SizedBox(height: 24),
-
-        // Login button
         SizedBox(
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.pushReplacement(context, MaterialPageRoute(
-                  builder: (context) => const HomePage()
-                ),
-              );
-            },
+            onPressed: _signInWithEmailPassword,
             child: const Text('Entrar'),
           ),
         ),
-
         const SizedBox(height: 16),
-
-        // Divider
         Row(
           children: [
             const Expanded(child: Divider()),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'ou',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              child: Text('ou', style: Theme.of(context).textTheme.bodySmall),
             ),
             const Expanded(child: Divider()),
           ],
         ),
-
         const SizedBox(height: 16),
-
-        // Social login buttons
         SizedBox(
           width: double.infinity,
           height: 48,
           child: OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Implement Google login
-            },
+            onPressed: _signInWithGoogle,
             icon: const Icon(Icons.g_mobiledata, size: 24),
             label: const Text('Continuar com Google'),
             style: OutlinedButton.styleFrom(
@@ -205,3 +207,4 @@ class TelaLogin extends StatelessWidget {
     );
   }
 }
+
