@@ -18,7 +18,7 @@ const dbConfig = {
  * HTTP Trigger Function for Post Creation
  * This replaces the old function.json + index.js approach
  */
-app.http('posts', {
+app.http('createPosts', {
     methods: ['POST'],           // Only allow POST requests
     authLevel: 'anonymous',      // No authentication required
     route: 'posts',             // This makes the endpoint /api/posts
