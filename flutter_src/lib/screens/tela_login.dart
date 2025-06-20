@@ -6,6 +6,7 @@ import 'tela_registro.dart';
 import '../home_page.dart';
 import '../design_system/colors/ui_colors.dart';
 import '../design_system/colors/color_aliases.dart';
+import '../services/user_sync_service.dart';
 
 class TelaLogin extends StatefulWidget {
   const TelaLogin({Key? key}) : super(key: key);
@@ -15,53 +16,136 @@ class TelaLogin extends StatefulWidget {
 }
 
 class _TelaLoginState extends State<TelaLogin> {
-  final TextEditingController _emailUsernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
 
   void _signInWithEmailPassword() async {
-    String input = _emailUsernameController.text.trim();
+    String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    try {
-      String email = input;
-      // Checar se o usuário digitou um nome de usuário (simplesmente detectar se não é um email válido)
-      if (!email.contains('@')) {
-        throw FirebaseAuthException(
-          code: 'invalid-email',
-          message: 'Digite um e-mail válido.',
-        );
-      }
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Por favor, preencha todos os campos.');
+      return;
+    }
 
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+    setState(() => _isLoading = true);
+
+    try {
+      // Step 1: Sign in with Firebase
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Step 2: Sync user with your database
+      final syncResult = await UserSyncService.syncFirebaseUser(
+        userCredential.user!,
+      );
+
+      if (syncResult.success) {
+        // Step 3: Navigate to home screen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomePage()),
+          );
+        }
+      } else {
+        _showError('Erro ao sincronizar usuário: ${syncResult.error}');
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'Nenhum usuário encontrado com este e-mail.';
+          break;
+        case 'wrong-password':
+          errorMessage = 'Senha incorreta.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'E-mail inválido.';
+          break;
+        case 'user-disabled':
+          errorMessage = 'Esta conta foi desabilitada.';
+          break;
+        default:
+          errorMessage = 'Erro ao fazer login: ${e.message}';
+      }
+      _showError(errorMessage);
     } catch (e) {
-      _showError(e.toString());
+      _showError('Erro inesperado: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+
     try {
+      // Step 1: Google Sign In
       final GoogleSignIn googleSignIn = GoogleSignIn();
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
-      if (googleUser == null) return; // usuário cancelou
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        setState(() => _isLoading = false);
+        return;
+      }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      await _auth.signInWithCredential(credential);
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+      // Step 2: Sign in with Firebase
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      // Step 3: Sync user with your database
+      final syncResult = await UserSyncService.syncFirebaseUser(
+        userCredential.user!,
+      );
+
+      if (syncResult.success) {
+        // Step 4: Navigate to home screen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomePage()),
+          );
+        }
+      } else {
+        _showError('Erro ao sincronizar usuário: ${syncResult.error}');
+      }
     } catch (e) {
-      _showError(e.toString());
+      _showError('Erro no login com Google: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: UIColors.surfaceError),
+      );
+    }
+  }
+
+  void _showLoading() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
   }
 
   @override
@@ -93,36 +177,48 @@ class _TelaLoginState extends State<TelaLogin> {
                   'Trip Nick',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        color: ColorAliases.primaryDefault,
-                        letterSpacing: 2,
-                      ),
+                    color: ColorAliases.primaryDefault,
+                    letterSpacing: 2,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Descubra, explore e compartilhe',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: UIColors.textDisabled,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: UIColors.textDisabled),
                 ),
                 const SizedBox(height: 48),
                 _buildLoginForm(context),
                 const SizedBox(height: 24),
                 Center(
                   child: TextButton(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(
-                        builder: (context) => RegisterScreen(),
-                      ));
-                    },
+                    onPressed:
+                        _isLoading
+                            ? null
+                            : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => RegisterScreen(),
+                                ),
+                              );
+                            },
                     child: RichText(
                       text: TextSpan(
                         style: Theme.of(context).textTheme.bodyMedium,
                         children: [
-                          TextSpan(text: 'Não tem uma conta? ', style: TextStyle(color: UIColors.textBody)),
+                          TextSpan(
+                            text: 'Não tem uma conta? ',
+                            style: TextStyle(color: UIColors.textBody),
+                          ),
                           TextSpan(
                             text: 'Criar conta',
-                            style: TextStyle(color: UIColors.textAction, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              color: UIColors.textAction,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -142,31 +238,42 @@ class _TelaLoginState extends State<TelaLogin> {
     return Column(
       children: [
         TextField(
-          controller: _emailUsernameController,
+          controller: _emailController,
+          enabled: !_isLoading,
           decoration: const InputDecoration(
-            labelText: 'E-mail ou usuário',
-            hintText: 'Digite seu e-mail ou nome de usuário',
-            prefixIcon: Icon(Icons.person_outline),
+            labelText: 'E-mail',
+            hintText: 'Digite seu e-mail',
+            prefixIcon: Icon(Icons.email_outlined),
           ),
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
         TextField(
           controller: _passwordController,
+          enabled: !_isLoading,
           obscureText: true,
           decoration: const InputDecoration(
             labelText: 'Senha',
             hintText: 'Digite sua senha',
             prefixIcon: Icon(Icons.lock_outline),
-            suffixIcon: Icon(Icons.visibility_off_outlined),
           ),
         ),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: () {},
-            child: Text('Esqueceu a senha?', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: UIColors.textAction)),
+            onPressed:
+                _isLoading
+                    ? null
+                    : () {
+                      // TODO: Implement password reset
+                    },
+            child: Text(
+              'Esqueceu a senha?',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: UIColors.textAction),
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -174,8 +281,18 @@ class _TelaLoginState extends State<TelaLogin> {
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
-            onPressed: _signInWithEmailPassword,
-            child: const Text('Entrar'),
+            onPressed: _isLoading ? null : _signInWithEmailPassword,
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                    : const Text('Entrar'),
           ),
         ),
         const SizedBox(height: 16),
@@ -194,7 +311,7 @@ class _TelaLoginState extends State<TelaLogin> {
           width: double.infinity,
           height: 48,
           child: OutlinedButton.icon(
-            onPressed: _signInWithGoogle,
+            onPressed: _isLoading ? null : _signInWithGoogle,
             icon: const Icon(Icons.g_mobiledata, size: 24),
             label: const Text('Continuar com Google'),
             style: OutlinedButton.styleFrom(
@@ -207,4 +324,3 @@ class _TelaLoginState extends State<TelaLogin> {
     );
   }
 }
-

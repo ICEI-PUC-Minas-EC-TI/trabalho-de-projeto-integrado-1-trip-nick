@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../home_page.dart';
+import '../design_system/colors/ui_colors.dart';
+import '../design_system/colors/color_aliases.dart';
+import '../services/user_sync_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -7,122 +11,284 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _displayNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
 
   void _register() async {
+    final displayName = _displayNameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
+
+    // Validation
+    if (displayName.isEmpty || email.isEmpty || password.isEmpty) {
+      _showError('Por favor, preencha todos os campos obrigatórios');
+      return;
+    }
 
     if (password != confirmPassword) {
       _showError('As senhas não coincidem');
       return;
     }
 
+    if (password.length < 6) {
+      _showError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
     try {
-      await _auth.createUserWithEmailAndPassword(email: email, password: password);
-      Navigator.pop(context); // Volta para o login após cadastro
+      // Step 1: Create Firebase user
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Step 2: Update Firebase profile with display name
+      await userCredential.user!.updateDisplayName(displayName);
+
+      // Step 3: Sync user with your database
+      final syncResult = await UserSyncService.syncFirebaseUser(
+        userCredential.user!,
+      );
+
+      // For now, just navigate to home (remove this when implementing sync)
+      // if (mounted) {
+      //   Navigator.pushReplacement(
+      //     context,
+      //     MaterialPageRoute(builder: (_) => const HomePage()),
+      //   );
+      // }
+
+      if (syncResult.success) {
+        // Step 4: Navigate to home screen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomePage()),
+          );
+        }
+      } else {
+        _showError('Erro ao criar perfil: ${syncResult.error}');
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'weak-password':
+          errorMessage = 'A senha é muito fraca.';
+          break;
+        case 'email-already-in-use':
+          errorMessage = 'Este e-mail já está sendo usado por outra conta.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'E-mail inválido.';
+          break;
+        default:
+          errorMessage = 'Erro ao criar conta: ${e.message}';
+      }
+      _showError(errorMessage);
     } catch (e) {
-      _showError(e.toString());
+      _showError('Erro inesperado: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: UIColors.surfaceError),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Container(color: Colors.green[700]),
-          CustomPaint(
-            size: Size(MediaQuery.of(context).size.width, MediaQuery.of(context).size.height),
-            painter: FundoOndulado(),
-          ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('CREATE ACCOUNT', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
-                  const SizedBox(height: 20),
-                  _buildTextField(Icons.person, "Username", controller: _usernameController),
-                  const SizedBox(height: 10),
-                  _buildTextField(Icons.email, "E-mail", controller: _emailController),
-                  const SizedBox(height: 10),
-                  _buildTextField(Icons.lock, "Password", controller: _passwordController, obscureText: true),
-                  const SizedBox(height: 10),
-                  _buildTextField(Icons.lock, "Confirm Password", controller: _confirmPasswordController, obscureText: true),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+      backgroundColor: UIColors.surfacePrimary,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: UIColors.iconPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Criar Conta',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 32),
+
+                // Welcome text
+                Text(
+                  'Bem-vindo ao Trip Nick!',
+                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    color: ColorAliases.primaryDefault,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Crie sua conta para começar a descobrir e compartilhar lugares incríveis.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: UIColors.textDisabled),
+                ),
+
+                const SizedBox(height: 40),
+
+                // Registration form
+                _buildRegistrationForm(),
+
+                const SizedBox(height: 32),
+
+                // Register button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _register,
+                    child:
+                        _isLoading
+                            ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                            : const Text('Criar Conta'),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Back to login
+                Center(
+                  child: TextButton(
+                    onPressed: _isLoading ? null : () => Navigator.pop(context),
+                    child: RichText(
+                      text: TextSpan(
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        children: [
+                          TextSpan(
+                            text: 'Já tem uma conta? ',
+                            style: TextStyle(color: UIColors.textBody),
+                          ),
+                          TextSpan(
+                            text: 'Fazer login',
+                            style: TextStyle(
+                              color: UIColors.textAction,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    onPressed: _register,
-                    child: Text('Sign In', style: TextStyle(color: Colors.green[700])),
                   ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Back to Login', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: 40),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildTextField(IconData icon, String hintText, {bool obscureText = false, required TextEditingController controller}) {
-    return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.8),
-        prefixIcon: Icon(icon, color: Colors.green[700]),
-        hintText: hintText,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      ),
+  Widget _buildRegistrationForm() {
+    return Column(
+      children: [
+        // Display Name field
+        TextField(
+          controller: _displayNameController,
+          enabled: !_isLoading,
+          decoration: const InputDecoration(
+            labelText: 'Nome completo *',
+            hintText: 'Digite seu nome completo',
+            prefixIcon: Icon(Icons.person_outline),
+          ),
+          textCapitalization: TextCapitalization.words,
+        ),
+
+        const SizedBox(height: 16),
+
+        // Email field
+        TextField(
+          controller: _emailController,
+          enabled: !_isLoading,
+          decoration: const InputDecoration(
+            labelText: 'E-mail *',
+            hintText: 'Digite seu e-mail',
+            prefixIcon: Icon(Icons.email_outlined),
+          ),
+          keyboardType: TextInputType.emailAddress,
+        ),
+
+        const SizedBox(height: 16),
+
+        // Password field
+        TextField(
+          controller: _passwordController,
+          enabled: !_isLoading,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'Senha *',
+            hintText: 'Mínimo 6 caracteres',
+            prefixIcon: Icon(Icons.lock_outline),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Confirm Password field
+        TextField(
+          controller: _confirmPasswordController,
+          enabled: !_isLoading,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'Confirmar senha *',
+            hintText: 'Digite sua senha novamente',
+            prefixIcon: Icon(Icons.lock_outline),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Required fields note
+        Row(
+          children: [
+            Icon(Icons.info_outline, size: 16, color: UIColors.textDisabled),
+            const SizedBox(width: 8),
+            Text(
+              '* Campos obrigatórios',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: UIColors.textDisabled),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
-
-class FundoOndulado extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    Paint paint = Paint()..color = Colors.white.withOpacity(0.9);
-    Path path = Path();
-
-    path.moveTo(0, size.height * 0.2);
-    path.quadraticBezierTo(size.width * 0.25, size.height * 0.1, size.width * 0.5, size.height * 0.15);
-    path.quadraticBezierTo(size.width * 0.75, size.height * 0.2, size.width, size.height * 0.1);
-    path.lineTo(size.width, 0);
-    path.lineTo(0, 0);
-    path.close();
-    canvas.drawPath(path, paint);
-
-    path.reset();
-    path.moveTo(0, size.height * 0.8);
-    path.quadraticBezierTo(size.width * 0.25, size.height * 0.9, size.width * 0.5, size.height * 0.85);
-    path.quadraticBezierTo(size.width * 0.75, size.height * 0.8, size.width, size.height * 0.9);
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
-
