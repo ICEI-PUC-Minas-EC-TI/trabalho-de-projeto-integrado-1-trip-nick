@@ -1,10 +1,5 @@
 # Travel App API Development Checklist
 
-
-### Phase 1: Core Features (Essential for MVP)
-### Phase 2: Enhanced Features (Post-MVP)
-### Phase 3: Advanced Features (Future iterations)
-
 ---
 
 ## 1. **Authentication & User Management** 🔐
@@ -13,7 +8,8 @@
 - [ ] `POST /api/auth/register` - User registration
 - [ ] `POST /api/auth/login` - User authentication
 - [ ] `POST /api/auth/logout` - User logout
-- [ ] `POST /api/auth/refresh` - Refresh access token
+- [ ] `POST /api/auth/refresh` - Refresh access	
+  
 - [ ] `POST /api/auth/forgot-password` - Request password reset
 - [ ] `POST /api/auth/reset-password` - Reset password with token
 
@@ -73,7 +69,7 @@
 ### Basic List Operations
 - [x] `POST /api/lists` - Create new list 
 - [ ] `PUT /api/lists/{id}` - Update list (name, visibility)
-- [ ] `DELETE /api/lists/{id}` - Delete list
+- [x] `DELETE /api/lists/{id}` - Delete list
 
 ### List-Spot Association
 - [x] `POST /api/lists/{id}/spots` - Add spot to list 

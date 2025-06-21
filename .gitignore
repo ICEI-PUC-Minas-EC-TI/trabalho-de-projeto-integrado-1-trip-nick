@@ -104,7 +104,7 @@ infrastructure/.terragrunt-cache/
 infrastructure/.terraform.lock.hcl
 
 # IDE related
-.vscode/
+
 .idea/
 *.swp
 *.swo
