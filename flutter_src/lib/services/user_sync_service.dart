@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Service to sync Firebase users with your Azure SQL database
 class UserSyncService {
   // Replace with your actual Azure Functions URL
-  static const String _baseUrl = 'http://192.168.0.59:7071/api';
+  static const String _baseUrl = 'https://tripnick-api.azurewebsites.net/api';
 
   /// Sync Firebase user with your database and return internal user_id
   static Future<UserSyncResult> syncFirebaseUser(User firebaseUser) async {

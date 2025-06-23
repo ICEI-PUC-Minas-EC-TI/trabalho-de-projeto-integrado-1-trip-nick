@@ -1,6 +1,6 @@
 /// API Configuration and App Constants
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.0.59:7071/api';
+  static const String baseUrl = 'https://tripnick-api.azurewebsites.net/api';
 
   // API Endpoints
   static const String spotsEndpoint = '/spots';
@@ -20,7 +20,7 @@ class ApiConstants {
 class AppConstants {
   // Image placeholders
   static const String defaultSpotImageUrl =
-      'https://via.placeholder.com/400x200.png?text=Spot+Image';
+      'https://store321307560.blob.core.windows.net/images/pompeu.jpg';
 
   // Error messages
   static const String networkErrorMessage =
