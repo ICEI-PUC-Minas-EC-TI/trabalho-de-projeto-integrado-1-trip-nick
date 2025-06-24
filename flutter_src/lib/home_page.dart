@@ -82,11 +82,8 @@ class HomePage extends StatelessWidget {
 
   /// Navigates to the list creation screen as a full-screen modal
   void _navigateToListCreation(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ListCreationScreen(),
-        fullscreenDialog: true, // This makes it open as a modal from bottom
-      ),
-    );
+    print("==================================================");
+    print("LISTA CRIACAO DE LISTAAAAA");
+    print("==================================================");
   }
 }
