@@ -3,6 +3,8 @@ import 'screens/trending_screen.dart';
 import 'screens/minhas_viagens_screen.dart';
 import 'screens/comunidade_screen.dart';
 import 'screens/menu_screen.dart';
+import 'screens/post_creation_screen.dart'; // Import our new placeholder screen
+import 'widgets/speed_dial_fab.dart'; // Import our new SpeedDialFAB
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -42,13 +44,48 @@ class HomePage extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
+        body: Stack(
           children: [
-            TrendingScreen(),
-            MinhasViagensScreen(),
-            ComunidadeScreen(),
+            // Main tab content
+            const TabBarView(
+              children: [
+                TrendingScreen(),
+                MinhasViagensScreen(),
+                ComunidadeScreen(),
+              ],
+            ),
+
+            // Floating SpeedDial FAB positioned in bottom-right
+            Positioned(
+              bottom: 16,
+              right: 16,
+              child: SpeedDialFAB(
+                onCreatePost: () => _navigateToPostCreation(context),
+                onCreateList: () => _navigateToListCreation(context),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Navigates to the post creation screen as a full-screen modal
+  void _navigateToPostCreation(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const PostCreationScreen(),
+        fullscreenDialog: true, // This makes it open as a modal from bottom
+      ),
+    );
+  }
+
+  /// Navigates to the list creation screen as a full-screen modal
+  void _navigateToListCreation(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ListCreationScreen(),
+        fullscreenDialog: true, // This makes it open as a modal from bottom
       ),
     );
   }

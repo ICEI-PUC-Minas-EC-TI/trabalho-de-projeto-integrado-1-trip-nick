@@ -132,9 +132,14 @@ async function getSpotById(spotId, includeImages, includeStats, pool, context) {
     
     const request_db = new sql.Request(pool);
     
-    // Build image join if requested
+    // UPDATED: Build image join and fields with actual URLs
     const imageJoin = includeImages ? 'LEFT JOIN Images img ON s.spot_image_id = img.image_id' : '';
-    const imageFields = includeImages ? ', img.blob_url as spot_image_url, img.image_name as spot_image_name' : '';
+    const imageFields = includeImages ? `
+        , img.blob_url as spot_image_url, 
+        img.image_name as spot_image_name,
+        img.content_type as spot_image_content_type,
+        img.file_size as spot_image_file_size
+    ` : '';
     
     const query = `
         SELECT 

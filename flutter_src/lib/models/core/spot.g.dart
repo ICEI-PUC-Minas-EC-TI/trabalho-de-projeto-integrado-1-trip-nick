@@ -18,6 +18,10 @@ Spot _$SpotFromJson(Map<String, dynamic> json) => Spot(
           ? null
           : DateTime.parse(json['created_date'] as String),
   spot_image_id: (json['spot_image_id'] as num?)?.toInt(),
+  spot_image_url: json['spot_image_url'] as String?,
+  spot_image_name: json['spot_image_name'] as String?,
+  spot_image_content_type: json['spot_image_content_type'] as String?,
+  spot_image_file_size: (json['spot_image_file_size'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$SpotToJson(Spot instance) => <String, dynamic>{
@@ -29,4 +33,8 @@ Map<String, dynamic> _$SpotToJson(Spot instance) => <String, dynamic>{
   'description': instance.description,
   'created_date': instance.created_date?.toIso8601String(),
   'spot_image_id': instance.spot_image_id,
+  'spot_image_url': instance.spot_image_url,
+  'spot_image_name': instance.spot_image_name,
+  'spot_image_content_type': instance.spot_image_content_type,
+  'spot_image_file_size': instance.spot_image_file_size,
 };
