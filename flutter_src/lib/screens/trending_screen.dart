@@ -506,7 +506,7 @@ class _TrendingScreenState extends State<TrendingScreen> {
               city: spot.city,
               category: spot.category,
               description: spot.description ?? 'Descrição não disponível',
-              rating: 4.5, // TODO: Get real rating from API
+              rating: 4.0, // TODO: Get real rating from API
             ),
       ),
     );
