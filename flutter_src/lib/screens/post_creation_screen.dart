@@ -7,6 +7,7 @@ import '../providers/posts_provider.dart';
 import '../providers/lists_provider.dart';
 import '../widgets/spot_selection_widget.dart';
 import '../models/enums/post_creation_mode.dart';
+import '../widgets/image_picker_widget.dart';
 
 /// Complete post creation screen for creating community posts and list posts
 ///
@@ -84,15 +85,35 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   }
 
   /// Builds the main scaffold structure
+
   Widget _buildScaffold({
     required bool isLoading,
     String? errorMessage,
-    required bool hasError,
+    bool hasError = false,
   }) {
+    // Check if images are being uploaded (for community posts only)
+    final isUploadingImages =
+        widget.mode == PostCreationMode.community
+            ? Provider.of<PostsProvider>(
+              context,
+              listen: false,
+            ).isUploadingImages
+            : false;
+
+    final isActuallyLoading = isLoading || isUploadingImages;
+
     return Scaffold(
       backgroundColor: UIColors.surfacePrimary,
-      appBar: _buildAppBar(isLoading),
-      body: _buildBody(isLoading, errorMessage, hasError),
+      appBar: _buildAppBar(isActuallyLoading),
+      body: Stack(
+        children: [
+          // Your existing body content
+          _buildBody(isActuallyLoading, errorMessage, hasError),
+
+          // Loading overlay that shows image upload progress
+          if (isActuallyLoading) _buildLoadingOverlay(isUploadingImages),
+        ],
+      ),
     );
   }
 
@@ -154,6 +175,8 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                       const SizedBox(height: 24),
                       _buildSpotsSection(),
                       const SizedBox(height: 24),
+                      _buildImageSection(),
+                      const SizedBox(height: 32),
                       // Show error from provider if any
                       if (hasError && errorMessage != null)
                         _buildErrorMessage(errorMessage),
@@ -360,6 +383,33 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
     );
   }
 
+  Widget _buildImageSection() {
+    // Only show image upload for community posts (not list posts)
+    if (widget.mode == PostCreationMode.listPost) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section divider
+        Divider(color: UIColors.borderPrimary, thickness: 1, height: 32),
+
+        // Image picker widget
+        ImagePickerWidget(
+          maxImages: 10,
+          showProgress: true,
+          onImagesChanged: () {
+            // Clear any form-level errors when images change
+            setState(() {
+              _errorMessage = null;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
   /// Builds the list of selected spots (reused from original)
   Widget _buildSelectedSpotsList() {
     return Container(
@@ -523,33 +573,62 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   }
 
   /// Builds loading overlay (reused from original)
-  Widget _buildLoadingOverlay() {
-    final String loadingText =
-        widget.mode == PostCreationMode.listPost
-            ? 'Criando lista...'
-            : 'Criando post...';
+  /// Builds loading overlay with image upload awareness
+  Widget _buildLoadingOverlay([bool isUploadingImages = false]) {
+    String loadingText;
+
+    if (isUploadingImages) {
+      loadingText = 'Enviando imagens...';
+    } else if (widget.mode == PostCreationMode.listPost) {
+      loadingText = 'Creating your list...';
+    } else {
+      loadingText = 'Creating your post...';
+    }
 
     return Container(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black54,
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                ColorAliases.primaryDefault,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                loadingText,
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              loadingText,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+
+              // Show image upload progress if applicable
+              if (isUploadingImages) ...[
+                const SizedBox(height: 8),
+                Consumer<PostsProvider>(
+                  builder: (context, postsProvider, child) {
+                    final progress = postsProvider.batchUploadProgress;
+                    final uploaded = postsProvider.successfulUploads;
+                    final total = postsProvider.selectedImages.length;
+
+                    return Column(
+                      children: [
+                        LinearProgressIndicator(value: progress),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$uploaded/$total imagens enviadas',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -593,21 +672,19 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   // =============================================================================
 
   /// Handles form submission
+  /// Handles form submission with image upload support
   void _onSubmit() async {
-    // Clear local errors
+    // Clear any existing errors
     setState(() {
       _errorMessage = null;
     });
 
     // Validate form
     if (!_formKey.currentState!.validate()) {
-      setState(() {
-        _errorMessage = 'Please fix the errors above';
-      });
       return;
     }
 
-    // Check spots requirement
+    // Validate spots
     if (_selectedSpots.isEmpty) {
       setState(() {
         _errorMessage =
@@ -618,18 +695,49 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
       return;
     }
 
+    // Get the provider instance
+    final postsProvider = Provider.of<PostsProvider>(context, listen: false);
+
+    // Validate selected images if any
+    final imageValidationError = postsProvider.validateSelectedImages();
+    if (imageValidationError != null) {
+      setState(() {
+        _errorMessage = imageValidationError;
+      });
+      return;
+    }
+
     // Submit based on mode
     bool success = false;
     if (widget.mode == PostCreationMode.listPost) {
       success = await _submitListPost();
     } else {
-      success = await _submitCommunityPost();
+      success = await _submitCommunityPostWithImages();
     }
 
     if (success && mounted) {
       Navigator.of(context).pop();
       _showSuccessSnackBar();
     }
+  }
+
+  /// Submits community post with image upload support
+  Future<bool> _submitCommunityPostWithImages() async {
+    final postsProvider = Provider.of<PostsProvider>(context, listen: false);
+
+    return await postsProvider.createCommunityPostWithImages(
+      title: _titleController.text.trim(),
+      description:
+          _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
+      userId: _currentUserId,
+      selectedSpots: _selectedSpots,
+      imageFiles:
+          postsProvider.selectedImages.isNotEmpty
+              ? postsProvider.selectedImages
+              : null,
+    );
   }
 
   /// Submits list post
@@ -710,5 +818,14 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize image upload service
+    final postsProvider = Provider.of<PostsProvider>(context, listen: false);
+    postsProvider.clearSelectedImages(); // Clear any previous selections
   }
 }

@@ -5,6 +5,11 @@ import '../services/posts_service.dart';
 import '../services/lists_service.dart';
 import '../utils/exceptions.dart';
 import '../utils/post_constants.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import '../models/api_responses/upload_result.dart';
+import '../models/core/image.dart' as models;
+import '../services/image_upload_service.dart';
 
 /// State management for posts data
 /// Handles post creation, loading states, error handling, and data caching
@@ -32,6 +37,35 @@ class PostsProvider extends ChangeNotifier {
   static const Duration cacheTimeout = Duration(minutes: 5);
 
   // =============================================================================
+  // IMAGE VARIABLES
+  // =============================================================================
+
+  /// Image upload service
+  final ImageUploadService _imageUploadService = ImageUploadService();
+
+  /// Image picker for camera/gallery access
+  final ImagePicker _imagePicker = ImagePicker();
+
+  /// Selected images for upload
+  List<File> _selectedImages = [];
+
+  /// Upload progress for each image (index -> progress)
+  Map<int, double> _uploadProgress = {};
+
+  /// Uploaded images results
+  List<UploadResult> _uploadResults = [];
+
+  /// Overall upload state
+  bool _isUploadingImages = false;
+
+  /// Upload error message
+  String? _uploadErrorMessage;
+
+  /// Batch upload progress (completed out of total)
+  int _uploadedCount = 0;
+  int _totalToUpload = 0;
+
+  // =============================================================================
   // GETTERS - UI reads these values
   // =============================================================================
 
@@ -48,6 +82,48 @@ class PostsProvider extends ChangeNotifier {
   String? get postsErrorMessage => _postsErrorMessage;
   bool get hasPostsData => _allPosts.isNotEmpty;
   bool get hasPostsError => _postsErrorMessage != null;
+
+  // =============================================================================
+  // IMAGE UPLOAD GETTERS - Add these to your existing getters
+  // =============================================================================
+
+  /// Selected images for upload
+  List<File> get selectedImages => _selectedImages;
+
+  /// Upload progress for each image
+  Map<int, double> get uploadProgress => _uploadProgress;
+
+  /// Upload results
+  List<UploadResult> get uploadResults => _uploadResults;
+
+  /// Whether images are being uploaded
+  bool get isUploadingImages => _isUploadingImages;
+
+  /// Upload error message
+  String? get uploadErrorMessage => _uploadErrorMessage;
+
+  /// Whether there's an upload error
+  bool get hasUploadError => _uploadErrorMessage != null;
+
+  /// Batch upload progress (0.0 to 1.0)
+  double get batchUploadProgress {
+    if (_totalToUpload == 0) return 0.0;
+    return _uploadedCount / _totalToUpload;
+  }
+
+  /// Number of successfully uploaded images
+  int get successfulUploads =>
+      _uploadResults.where((r) => r.isSuccessful).length;
+
+  /// Number of failed uploads
+  int get failedUploads => _uploadResults.where((r) => r.isFailed).length;
+
+  /// Whether all uploads completed (successfully or not)
+  bool get allUploadsCompleted =>
+      _uploadedCount >= _totalToUpload && _totalToUpload > 0;
+
+  /// Whether any uploads are in progress
+  bool get hasUploadsInProgress => _uploadResults.any((r) => r.isInProgress);
 
   // =============================================================================
   // COMMUNITY POST CREATION (Main Feature)
@@ -232,6 +308,230 @@ class PostsProvider extends ChangeNotifier {
   }
 
   // =============================================================================
+  // IMAGE SELECTION METHODS - Add these new methods
+  // =============================================================================
+
+  /// Opens image picker to select images from gallery
+  Future<void> selectImagesFromGallery() async {
+    try {
+      final List<XFile> pickedFiles = await _imagePicker.pickMultiImage();
+
+      if (pickedFiles.isNotEmpty) {
+        _selectedImages = pickedFiles.map((xFile) => File(xFile.path)).toList();
+        _clearUploadState();
+        notifyListeners();
+      }
+    } catch (e) {
+      _uploadErrorMessage = 'Erro ao selecionar imagens: ${e.toString()}';
+      notifyListeners();
+    }
+  }
+
+  /// Opens camera to take a photo
+  Future<void> takePhotoWithCamera() async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        _selectedImages = [File(pickedFile.path)];
+        _clearUploadState();
+        notifyListeners();
+      }
+    } catch (e) {
+      _uploadErrorMessage = 'Erro ao tirar foto: ${e.toString()}';
+      notifyListeners();
+    }
+  }
+
+  /// Removes an image from selection
+  void removeSelectedImage(int index) {
+    if (index >= 0 && index < _selectedImages.length) {
+      _selectedImages.removeAt(index);
+      _clearUploadState();
+      notifyListeners();
+    }
+  }
+
+  /// Clears all selected images
+  void clearSelectedImages() {
+    _selectedImages.clear();
+    _clearUploadState();
+    notifyListeners();
+  }
+
+  // =============================================================================
+  // IMAGE UPLOAD METHODS - Add these new methods
+  // =============================================================================
+
+  /// Uploads all selected images with progress tracking
+  Future<void> uploadSelectedImages() async {
+    if (_selectedImages.isEmpty) return;
+
+    _isUploadingImages = true;
+    _uploadErrorMessage = null;
+    _uploadProgress.clear();
+    _uploadResults.clear();
+    _uploadedCount = 0;
+    _totalToUpload = _selectedImages.length;
+    notifyListeners();
+
+    try {
+      // Initialize image upload service
+      _imageUploadService.initialize();
+
+      // Upload images in batch
+      _uploadResults = await _imageUploadService.uploadBatch(
+        _selectedImages,
+        onBatchProgress: (completed, total) {
+          _uploadedCount = completed;
+          _totalToUpload = total;
+          notifyListeners();
+        },
+        onIndividualProgress: (index, progress) {
+          _uploadProgress[index] = progress;
+          notifyListeners();
+        },
+      );
+
+      // Check for any failures
+      final failedCount = _uploadResults.where((r) => r.isFailed).length;
+      if (failedCount > 0) {
+        _uploadErrorMessage = 'Falha no upload de $failedCount imagem(ns)';
+      }
+    } catch (e) {
+      _uploadErrorMessage = 'Erro no upload: ${e.toString()}';
+    } finally {
+      _isUploadingImages = false;
+      notifyListeners();
+    }
+  }
+
+  /// Retries failed uploads
+  Future<void> retryFailedUploads() async {
+    final failedIndices = <int>[];
+
+    for (int i = 0; i < _uploadResults.length; i++) {
+      if (_uploadResults[i].isFailed) {
+        failedIndices.add(i);
+      }
+    }
+
+    if (failedIndices.isEmpty) return;
+
+    _isUploadingImages = true;
+    _uploadErrorMessage = null;
+    notifyListeners();
+
+    try {
+      // Retry each failed upload
+      for (final index in failedIndices) {
+        final file = _selectedImages[index];
+        final newResult = await _imageUploadService.uploadSingleImage(
+          file,
+          onProgress: (progress) {
+            _uploadProgress[index] = progress;
+            notifyListeners();
+          },
+        );
+        _uploadResults[index] = newResult;
+      }
+    } catch (e) {
+      _uploadErrorMessage = 'Erro ao tentar novamente: ${e.toString()}';
+    } finally {
+      _isUploadingImages = false;
+      notifyListeners();
+    }
+  }
+
+  // =============================================================================
+  // COMMUNITY POST CREATION WITH IMAGES - Modify existing method
+  // =============================================================================
+
+  /// Enhanced community post creation with image upload support
+  Future<bool> createCommunityPostWithImages({
+    required String title,
+    String? description,
+    required int userId,
+    required List<Spot> selectedSpots,
+    List<File>? imageFiles,
+  }) async {
+    _isCreatingPost = true;
+    _creationErrorMessage = null;
+    _lastCreatedPost = null;
+    notifyListeners();
+
+    try {
+      // Step 1: Upload images if provided
+      List<UploadResult> uploadResults = [];
+      if (imageFiles != null && imageFiles.isNotEmpty) {
+        _selectedImages = imageFiles;
+        await uploadSelectedImages();
+
+        // Check if image uploads were successful
+        uploadResults = _uploadResults;
+        final failedUploads = uploadResults.where((r) => r.isFailed).length;
+        if (failedUploads > 0) {
+          throw ServerException('Falha no upload de $failedUploads imagem(ns)');
+        }
+      }
+
+      // Step 2: Create the community post (existing logic)
+      final response = await _postsService.createCommunityPost(
+        title: title.trim(),
+        description: description?.trim(),
+        userId: userId,
+        selectedSpots: selectedSpots,
+      );
+
+      // Step 3: Link images to the created post
+      if (uploadResults.isNotEmpty && response.post_id != null) {
+        final linkSuccess = await _imageUploadService.linkImagesToPost(
+          response.post_id!,
+          uploadResults,
+        );
+
+        if (!linkSuccess) {
+          // Post was created but image linking failed
+          // This is not a complete failure, just log it
+          debugPrint('Warning: Post created but image linking failed');
+        }
+      }
+
+      // Success! Update state
+      _lastCreatedPost = response;
+      _isCreatingPost = false;
+      _creationErrorMessage = null;
+
+      // Clear image state after successful post creation
+      _clearImageState();
+
+      // Invalidate posts cache so fresh data loads
+      _lastPostsUpdate = null;
+
+      notifyListeners();
+
+      debugPrint(
+        'Community post with images created successfully: ${response.post_id}',
+      );
+      return true;
+    } catch (e) {
+      _isCreatingPost = false;
+      _creationErrorMessage = _getCreationErrorMessage(e);
+      _lastCreatedPost = null;
+
+      notifyListeners();
+
+      debugPrint('Error creating community post with images: $e');
+      return false;
+    }
+  }
+
+  // =============================================================================
   // VALIDATION HELPERS
   // =============================================================================
 
@@ -262,6 +562,111 @@ class PostsProvider extends ChangeNotifier {
     return validateTitle(title) == null &&
         validateDescription(description) == null &&
         validateSpotSelection(selectedSpots) == null;
+  }
+
+  // =============================================================================
+  // HELPER METHODS - Add these private methods
+  // =============================================================================
+
+  /// Clears upload state but keeps selected images
+  void _clearUploadState() {
+    _uploadProgress.clear();
+    _uploadResults.clear();
+    _uploadErrorMessage = null;
+    _isUploadingImages = false;
+    _uploadedCount = 0;
+    _totalToUpload = 0;
+  }
+
+  /// Clears all image-related state
+  void _clearImageState() {
+    _selectedImages.clear();
+    _clearUploadState();
+  }
+
+  /// Gets upload status message for UI display
+  String getUploadStatusMessage() {
+    if (_uploadResults.isEmpty) return '';
+
+    final successful = successfulUploads;
+    final failed = failedUploads;
+    final total = _uploadResults.length;
+
+    if (failed == 0) {
+      return '$successful/$total imagens enviadas com sucesso';
+    } else if (successful == 0) {
+      return 'Falha no envio de todas as $total imagens';
+    } else {
+      return '$successful/$total imagens enviadas ($failed falharam)';
+    }
+  }
+
+  /// Validates selected images
+  String? validateSelectedImages() {
+    if (_selectedImages.isEmpty) return null;
+
+    // Check file sizes
+    for (final file in _selectedImages) {
+      final fileSize = file.lengthSync();
+      if (fileSize > _imageUploadService.maxFileSize) {
+        return 'Uma ou mais imagens excedem o tamanho máximo de ${_imageUploadService.getFileSizeString(_imageUploadService.maxFileSize)}';
+      }
+
+      // Check if it's a valid image
+      if (!_imageUploadService.isValidImageFile(file)) {
+        return 'Um ou mais arquivos não são imagens válidas';
+      }
+    }
+
+    return null;
+  }
+
+  // =============================================================================
+  // IMAGE PREVIEW HELPERS - Add these utility methods
+  // =============================================================================
+
+  /// Gets display URL for uploaded image
+  String? getImageDisplayUrl(int index) {
+    if (index < 0 || index >= _uploadResults.length) return null;
+
+    final result = _uploadResults[index];
+    if (result.registeredImage?.displayUrl != null) {
+      return result.registeredImage!.displayUrl;
+    }
+
+    // If not uploaded yet, return local file path for preview
+    if (index < _selectedImages.length) {
+      return _selectedImages[index].path;
+    }
+
+    return null;
+  }
+
+  /// Gets upload status for specific image
+  String getImageUploadStatus(int index) {
+    if (index < 0 || index >= _uploadResults.length) {
+      return 'Aguardando upload...';
+    }
+
+    return _uploadResults[index].statusMessage;
+  }
+
+  /// Checks if specific image upload was successful
+  bool isImageUploadSuccessful(int index) {
+    if (index < 0 || index >= _uploadResults.length) return false;
+    return _uploadResults[index].isSuccessful;
+  }
+
+  /// Gets file size for selected image
+  String getSelectedImageSize(int index) {
+    if (index < 0 || index >= _selectedImages.length) return '';
+
+    try {
+      final fileSize = _selectedImages[index].lengthSync();
+      return _imageUploadService.getFileSizeString(fileSize);
+    } catch (e) {
+      return 'Tamanho desconhecido';
+    }
   }
 
   // =============================================================================
