@@ -197,3 +197,71 @@ Map<String, dynamic> _$ReviewPostDataToJson(ReviewPostData instance) =>
       'spot_id': instance.spot_id,
       'rating': instance.rating,
     };
+
+CreateListPostRequest _$CreateListPostRequestFromJson(
+  Map<String, dynamic> json,
+) => CreateListPostRequest(
+  title: json['title'] as String,
+  description: json['description'] as String?,
+  user_id: (json['user_id'] as num).toInt(),
+  list_id: (json['list_id'] as num).toInt(),
+);
+
+Map<String, dynamic> _$CreateListPostRequestToJson(
+  CreateListPostRequest instance,
+) => <String, dynamic>{
+  'title': instance.title,
+  'description': instance.description,
+  'user_id': instance.user_id,
+  'list_id': instance.list_id,
+};
+
+CreateListPostResponse _$CreateListPostResponseFromJson(
+  Map<String, dynamic> json,
+) => CreateListPostResponse(
+  success: json['success'] as bool,
+  post_id: (json['post_id'] as num?)?.toInt(),
+  message: json['message'] as String?,
+  error: json['error'] as String?,
+  data:
+      json['data'] == null
+          ? null
+          : ListPostData.fromJson(json['data'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$CreateListPostResponseToJson(
+  CreateListPostResponse instance,
+) => <String, dynamic>{
+  'success': instance.success,
+  'post_id': instance.post_id,
+  'message': instance.message,
+  'error': instance.error,
+  'data': instance.data,
+};
+
+ListPostData _$ListPostDataFromJson(Map<String, dynamic> json) => ListPostData(
+  post_id: (json['post_id'] as num).toInt(),
+  type: json['type'] as String,
+  title: json['title'] as String,
+  description: json['description'] as String?,
+  user_id: (json['user_id'] as num).toInt(),
+  created_date: DateTime.parse(json['created_date'] as String),
+  list_id: (json['list_id'] as num).toInt(),
+  list_name: json['list_name'] as String,
+  is_public: json['is_public'] as bool,
+  spots_count: (json['spots_count'] as num).toInt(),
+);
+
+Map<String, dynamic> _$ListPostDataToJson(ListPostData instance) =>
+    <String, dynamic>{
+      'post_id': instance.post_id,
+      'type': instance.type,
+      'title': instance.title,
+      'description': instance.description,
+      'user_id': instance.user_id,
+      'created_date': instance.created_date.toIso8601String(),
+      'list_id': instance.list_id,
+      'list_name': instance.list_name,
+      'is_public': instance.is_public,
+      'spots_count': instance.spots_count,
+    };

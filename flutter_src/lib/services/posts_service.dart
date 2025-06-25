@@ -115,68 +115,6 @@ class PostsService {
   }
 
   // =============================================================================
-  // OTHER POST TYPES (Future Implementation)
-  // =============================================================================
-
-  /// Creates a list post (sharing an existing list)
-  ///
-  /// Parameters:
-  /// - [title]: Post title
-  /// - [listId]: ID of the existing list to share
-  /// - [description]: Post description (optional)
-  /// - [userId]: ID of the user creating the post
-  ///
-  /// Returns:
-  /// - [Map<String, dynamic>]: API response with post details
-  Future<Map<String, dynamic>> createListPost({
-    required String title,
-    required int listId,
-    String? description,
-    required int userId,
-  }) async {
-    try {
-      // Validate input
-      if (title.trim().isEmpty || title.length > PostConstants.maxTitleLength) {
-        throw ServerException('Invalid title');
-      }
-      if (listId <= 0) {
-        throw ServerException('Valid list ID is required');
-      }
-      if (userId <= 0) {
-        throw ServerException('Valid user ID is required');
-      }
-      if (description != null &&
-          description.length > PostConstants.maxDescriptionLength) {
-        throw ServerException('Description too long');
-      }
-
-      // Create request data
-      final requestData = {
-        'type': 'list',
-        'title': title.trim(),
-        'description': description,
-        'user_id': userId,
-        'list_id': listId,
-      };
-
-      // Make API call
-      final response = await _apiService.post(
-        ApiConstants.postsEndpoint,
-        body: requestData,
-      );
-
-      return response;
-    } catch (e) {
-      if (e is NetworkException ||
-          e is ServerException ||
-          e is NotFoundException) {
-        rethrow;
-      }
-      throw ServerException('Failed to create list post: ${e.toString()}');
-    }
-  }
-
-  // =============================================================================
   // POST RETRIEVAL
   // =============================================================================
 
@@ -822,6 +760,274 @@ class PostsService {
           userId > 0 &&
           (description == null || description.length <= 500),
     };
+  }
+
+  // =============================================================================
+  // LIST POST CREATION (New Feature)
+  // =============================================================================
+
+  /// Creates a list post with automatic public list creation
+  ///
+  /// This is the main method for creating list posts. It orchestrates:
+  /// 1. Creates a public list with auto-generated name
+  /// 2. Adds all selected spots to the public list
+  /// 3. Creates the list post that references the public list
+  ///
+  /// Parameters:
+  /// - [title]: Post title (max 45 characters)
+  /// - [description]: Post description (optional, max 500 characters)
+  /// - [userId]: ID of the user creating the post
+  /// - [selectedSpots]: List of spots to include in the list (1-10 spots)
+  ///
+  /// Returns:
+  /// - [CreateListPostResponse]: Complete response with post and list details
+  ///
+  /// Throws:
+  /// - [ValidationException]: If request data is invalid
+  /// - [ApiException]: For API-related errors during any step
+  /// - [NetworkException]: For network connectivity issues
+  Future<CreateListPostResponse> createListPost({
+    required String title,
+    String? description,
+    required int userId,
+    required List<Spot> selectedSpots,
+  }) async {
+    try {
+      // Step 1: Validate input data
+      _validateListPostInput(title, description, userId, selectedSpots);
+
+      // Step 2: Create public list with auto-generated name
+      final listResponse = await _createPublicListForPost(title);
+      final listId = listResponse.list_id!;
+
+      _logWorkflowStep('List created', {
+        'list_id': listId,
+        'list_name': listResponse.data?.list_name,
+      });
+
+      // Step 3: Add all selected spots to the public list
+      await _addSpotsToPublicList(listId, selectedSpots);
+
+      _logWorkflowStep('Spots added to list', {
+        'list_id': listId,
+        'spots_count': selectedSpots.length,
+      });
+
+      // Step 4: Create the list post record in the database
+      final postResponse = await _createListPostRecord(
+        title: title,
+        description: description,
+        userId: userId,
+        listId: listId,
+      );
+
+      _logWorkflowStep('List post created', {
+        'success': postResponse['success'],
+        'post_id': postResponse['post_id'],
+      });
+
+      // Step 5: Build and return complete response
+      final response = CreateListPostResponse(
+        success: true,
+        post_id: postResponse['post_id'],
+        message: postResponse['message'] ?? 'List post created successfully',
+        data: ListPostData(
+          post_id: postResponse['post_id'],
+          type: 'list',
+          title: title,
+          description: description,
+          user_id: userId,
+          created_date: DateTime.now(),
+          list_id: listId,
+          list_name: listResponse.data?.list_name ?? 'Generated List',
+          is_public: true,
+          spots_count: selectedSpots.length,
+        ),
+      );
+
+      _logWorkflowStep('Workflow completed', {
+        'post_id': response.post_id,
+        'list_id': listId,
+        'spots_count': selectedSpots.length,
+      });
+
+      return response;
+    } catch (e) {
+      _logWorkflowStep('Workflow failed', {
+        'error': e.toString(),
+        'step': 'createListPost',
+      });
+
+      if (e is ValidationException ||
+          e is NetworkException ||
+          e is ServerException ||
+          e is NotFoundException) {
+        rethrow;
+      }
+      throw ServerException('Failed to create list post: ${e.toString()}');
+    }
+  }
+
+  // =============================================================================
+  // LIST POST VALIDATION
+  // =============================================================================
+
+  /// Validates list post input data
+  void _validateListPostInput(
+    String title,
+    String? description,
+    int userId,
+    List<Spot> selectedSpots,
+  ) {
+    final List<String> errors = [];
+
+    // Validate title
+    if (!PostConstants.isValidTitleLength(title)) {
+      errors.add(
+        'Title is required and must be ${PostConstants.maxTitleLength} characters or less',
+      );
+    }
+
+    // Validate description
+    if (!PostConstants.isValidDescriptionLength(description)) {
+      errors.add(
+        'Description must be ${PostConstants.maxDescriptionLength} characters or less',
+      );
+    }
+
+    // Validate user ID
+    if (userId <= 0) {
+      errors.add('Valid user ID is required');
+    }
+
+    // Validate spots
+    if (!PostConstants.isValidSpotsCount(selectedSpots)) {
+      errors.add(
+        'Must have between ${PostConstants.minSpotsPerPost} and ${PostConstants.maxSpotsPerPost} spots',
+      );
+    }
+
+    // Check for duplicate spots
+    final spotIds = selectedSpots.map((spot) => spot.spot_id).toList();
+    if (spotIds.toSet().length != spotIds.length) {
+      errors.add('Duplicate spots are not allowed');
+    }
+
+    if (errors.isNotEmpty) {
+      throw ServerException('Invalid list post data: ${errors.join(', ')}');
+    }
+
+    print('PostsService: List post validation passed');
+  }
+
+  /// Get list post validation summary
+  Map<String, dynamic> getListPostValidationSummary({
+    required String title,
+    String? description,
+    required int userId,
+    required List<Spot> selectedSpots,
+  }) {
+    return {
+      'valid_title': PostConstants.isValidTitleLength(title),
+      'valid_description': PostConstants.isValidDescriptionLength(description),
+      'valid_user_id': userId > 0,
+      'valid_spots_count': PostConstants.isValidSpotsCount(selectedSpots),
+      'title_length': title.length,
+      'description_length': description?.length ?? 0,
+      'spots_count': selectedSpots.length,
+      'has_duplicate_spots':
+          selectedSpots.map((s) => s.spot_id).toSet().length !=
+          selectedSpots.length,
+      'is_valid':
+          PostConstants.isValidTitleLength(title) &&
+          PostConstants.isValidDescriptionLength(description) &&
+          userId > 0 &&
+          PostConstants.isValidSpotsCount(selectedSpots) &&
+          selectedSpots.map((s) => s.spot_id).toSet().length ==
+              selectedSpots.length,
+    };
+  }
+
+  // =============================================================================
+  // PRIVATE HELPER METHODS FOR LIST POSTS
+  // =============================================================================
+
+  /// Creates a public list for the list post
+  Future<CreateListResponse> _createPublicListForPost(String postTitle) async {
+    try {
+      // Generate auto-generated list name
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final listName = 'List_Post_$timestamp';
+
+      return await _listsService.createList(
+        listName: listName,
+        isPublic: true, // List posts always use public lists
+      );
+    } catch (e) {
+      throw ServerException(
+        'Failed to create public list for list post: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Adds all selected spots to the public list
+  Future<void> _addSpotsToPublicList(
+    int listId,
+    List<Spot> selectedSpots,
+  ) async {
+    try {
+      final spotIds = selectedSpots.map((spot) => spot.spot_id).toList();
+      await _listsService.addMultipleSpotsToList(
+        listId: listId,
+        spotIds: spotIds,
+      );
+    } catch (e) {
+      throw ServerException(
+        'Failed to add spots to public list: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Creates the list post record in the database
+  Future<Map<String, dynamic>> _createListPostRecord({
+    required String title,
+    String? description,
+    required int userId,
+    required int listId,
+  }) async {
+    try {
+      final request = CreateListPostRequest(
+        title: title,
+        description: description,
+        user_id: userId,
+        list_id: listId,
+      );
+
+      // Validate request
+      final validationErrors = request.validate();
+      if (validationErrors.isNotEmpty) {
+        throw ServerException(
+          'Invalid list post data: ${validationErrors.join(', ')}',
+        );
+      }
+
+      // Make API call to create the list post
+      final response = await _apiService.post(
+        ApiConstants.postsEndpoint,
+        body: request.toJson(),
+      );
+
+      return response;
+    } catch (e) {
+      if (e is NetworkException ||
+          e is ServerException ||
+          e is NotFoundException) {
+        rethrow;
+      }
+      throw ServerException(
+        'Failed to create list post record: ${e.toString()}',
+      );
+    }
   }
 
   // =============================================================================

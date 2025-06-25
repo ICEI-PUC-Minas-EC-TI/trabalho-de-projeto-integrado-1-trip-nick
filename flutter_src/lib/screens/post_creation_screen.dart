@@ -4,17 +4,24 @@ import '../design_system/colors/ui_colors.dart';
 import '../design_system/colors/color_aliases.dart';
 import '../models/core/spot.dart';
 import '../providers/posts_provider.dart';
+import '../providers/lists_provider.dart';
 import '../widgets/spot_selection_widget.dart';
+import '../models/enums/post_creation_mode.dart';
 
-/// Complete post creation screen for creating community posts
+/// Complete post creation screen for creating community posts and list posts
 ///
 /// This screen allows users to:
+/// - Choose between community post or list post creation
 /// - Enter a post title (required, max 45 characters)
 /// - Write a description (optional, max 500 characters)
 /// - Select spots to include in the post (required, 1-10 spots)
 /// - Submit the post for creation
 class PostCreationScreen extends StatefulWidget {
-  const PostCreationScreen({Key? key}) : super(key: key);
+  /// The creation mode (community or list post)
+  final PostCreationMode mode;
+
+  const PostCreationScreen({Key? key, this.mode = PostCreationMode.community})
+    : super(key: key);
 
   @override
   State<PostCreationScreen> createState() => _PostCreationScreenState();
@@ -40,6 +47,9 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   static const int _maxSpots = 10;
   static const int _minSpots = 1;
 
+  // Current user ID (mock - replace with real authentication)
+  static const int _currentUserId = 3;
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -49,33 +59,66 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PostsProvider>(
-      builder: (context, postsProvider, child) {
-        return Scaffold(
-          backgroundColor: UIColors.surfacePrimary,
-          appBar: _buildAppBar(postsProvider),
-          body: _buildBody(postsProvider),
-        );
-      },
+    // Use different providers based on mode
+    if (widget.mode == PostCreationMode.listPost) {
+      return Consumer<ListPostsProvider>(
+        builder: (context, listPostsProvider, child) {
+          return _buildScaffold(
+            isLoading: listPostsProvider.isCreatingListPost,
+            errorMessage: listPostsProvider.creationErrorMessage,
+            hasError: listPostsProvider.hasCreationError,
+          );
+        },
+      );
+    } else {
+      return Consumer<PostsProvider>(
+        builder: (context, postsProvider, child) {
+          return _buildScaffold(
+            isLoading: postsProvider.isCreatingPost,
+            errorMessage: postsProvider.creationErrorMessage,
+            hasError: postsProvider.hasCreationError,
+          );
+        },
+      );
+    }
+  }
+
+  /// Builds the main scaffold structure
+  Widget _buildScaffold({
+    required bool isLoading,
+    String? errorMessage,
+    required bool hasError,
+  }) {
+    return Scaffold(
+      backgroundColor: UIColors.surfacePrimary,
+      appBar: _buildAppBar(isLoading),
+      body: _buildBody(isLoading, errorMessage, hasError),
     );
   }
 
   /// Builds the app bar with close button and submit action
-  PreferredSizeWidget _buildAppBar(PostsProvider postsProvider) {
+  PreferredSizeWidget _buildAppBar(bool isLoading) {
+    final String title =
+        widget.mode == PostCreationMode.listPost
+            ? 'Create List'
+            : 'Create Post';
+
+    final String submitText =
+        widget.mode == PostCreationMode.listPost ? 'Create' : 'Post';
+
     return AppBar(
-      title: const Text('Create Post'),
+      title: Text(title),
       backgroundColor: ColorAliases.primaryDefault,
       foregroundColor: UIColors.textOnAction,
       leading: IconButton(icon: const Icon(Icons.close), onPressed: _onCancel),
       actions: [
         TextButton(
-          onPressed:
-              _canSubmit() && !postsProvider.isCreatingPost ? _onSubmit : null,
+          onPressed: _canSubmit() && !isLoading ? _onSubmit : null,
           child: Text(
-            'Post',
+            submitText,
             style: TextStyle(
               color:
-                  (_canSubmit() && !postsProvider.isCreatingPost)
+                  (_canSubmit() && !isLoading)
                       ? UIColors.textOnAction
                       : UIColors.textOnAction.withOpacity(0.5),
               fontWeight: FontWeight.w600,
@@ -89,7 +132,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   }
 
   /// Builds the main body content
-  Widget _buildBody(PostsProvider postsProvider) {
+  Widget _buildBody(bool isLoading, String? errorMessage, bool hasError) {
     return Stack(
       children: [
         Form(
@@ -103,18 +146,19 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (widget.mode == PostCreationMode.listPost)
+                        _buildListPostHeader(),
                       _buildTitleSection(),
                       const SizedBox(height: 24),
                       _buildDescriptionSection(),
                       const SizedBox(height: 24),
                       _buildSpotsSection(),
                       const SizedBox(height: 24),
-                      // Show error from PostsProvider if any
-                      if (postsProvider.hasCreationError)
-                        _buildErrorMessage(postsProvider.creationErrorMessage!),
+                      // Show error from provider if any
+                      if (hasError && errorMessage != null)
+                        _buildErrorMessage(errorMessage),
                       // Show local error if any (for validation)
-                      if (_errorMessage != null &&
-                          !postsProvider.hasCreationError)
+                      if (_errorMessage != null && !hasError)
                         _buildErrorMessage(_errorMessage!),
                     ],
                   ),
@@ -124,14 +168,57 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
           ),
         ),
 
-        // Loading overlay (from PostsProvider state)
-        if (postsProvider.isCreatingPost) _buildLoadingOverlay(),
+        // Loading overlay (from provider state)
+        if (isLoading) _buildLoadingOverlay(),
       ],
+    );
+  }
+
+  /// Builds the list post header with explanation
+  Widget _buildListPostHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: ColorAliases.primaryDefault.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: ColorAliases.primaryDefault.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.list, color: ColorAliases.primaryDefault, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Creating a New List',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: ColorAliases.primaryDefault,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'You\'re creating a new public list and sharing it with the community. Select your favorite spots and give it a great title!',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: UIColors.textAction),
+          ),
+        ],
+      ),
     );
   }
 
   /// Builds the title input section
   Widget _buildTitleSection() {
+    final String hintText =
+        widget.mode == PostCreationMode.listPost
+            ? 'What\'s your list about?'
+            : 'What\'s your post about?';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -140,7 +227,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
         TextFormField(
           controller: _titleController,
           decoration: InputDecoration(
-            hintText: 'What\'s your post about?',
+            hintText: hintText,
             counterText: '${_titleController.text.length}/$_maxTitleLength',
             suffixIcon:
                 _titleController.text.isNotEmpty
@@ -167,13 +254,28 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
 
   /// Builds the description input section
   Widget _buildDescriptionSection() {
+    final String labelText =
+        widget.mode == PostCreationMode.listPost
+            ? 'Description'
+            : 'Description';
+
+    final String hintText =
+        widget.mode == PostCreationMode.listPost
+            ? 'Tell others about your list...'
+            : 'Share details about these amazing places...';
+
+    final String helperText =
+        widget.mode == PostCreationMode.listPost
+            ? 'Describe what makes this list special (optional)'
+            : 'Tell others about your experience (optional)';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Description', style: Theme.of(context).textTheme.headlineMedium),
+        Text(labelText, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 4),
         Text(
-          'Tell others about your experience (optional)',
+          helperText,
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(color: UIColors.textDisabled),
@@ -182,7 +284,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
         TextFormField(
           controller: _descriptionController,
           decoration: InputDecoration(
-            hintText: 'Share details about these amazing places...',
+            hintText: hintText,
             counterText:
                 '${_descriptionController.text.length}/$_maxDescriptionLength',
             alignLabelWithHint: true,
@@ -202,6 +304,16 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
 
   /// Builds the spots selection section
   Widget _buildSpotsSection() {
+    final String sectionTitle =
+        widget.mode == PostCreationMode.listPost
+            ? 'Spots for Your List'
+            : 'Spots';
+
+    final String helperText =
+        widget.mode == PostCreationMode.listPost
+            ? 'Add amazing places to your new list'
+            : 'Add places you want to share with the community';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -209,7 +321,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
           children: [
             Expanded(
               child: Text(
-                'Spots',
+                sectionTitle,
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
             ),
@@ -226,7 +338,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Add places you want to share with the community',
+          helperText,
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(color: UIColors.textDisabled),
@@ -248,7 +360,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
     );
   }
 
-  /// Builds the list of selected spots
+  /// Builds the list of selected spots (reused from original)
   Widget _buildSelectedSpotsList() {
     return Container(
       decoration: BoxDecoration(
@@ -266,7 +378,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
     );
   }
 
-  /// Builds an individual selected spot item
+  /// Builds an individual selected spot item (reused from original)
   Widget _buildSelectedSpotItem(Spot spot, int index) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -278,22 +390,6 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
       ),
       child: Row(
         children: [
-          // Spot icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: ColorAliases.primary100,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              _getCategoryIcon(spot.category),
-              color: ColorAliases.primaryDefault,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-
           // Spot info
           Expanded(
             child: Column(
@@ -303,13 +399,32 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                   spot.spot_name,
                   style: Theme.of(
                     context,
-                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  spot.fullLocation,
+                  '${spot.city}, ${spot.country}',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: UIColors.textDisabled),
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ColorAliases.primaryDefault.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    spot.category,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ColorAliases.primaryDefault,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -317,26 +432,25 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
 
           // Remove button
           IconButton(
-            icon: const Icon(Icons.close),
-            color: UIColors.iconPrimary,
+            icon: const Icon(Icons.remove_circle_outline),
+            color: UIColors.iconError,
             onPressed: () => _removeSpot(spot),
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
       ),
     );
   }
 
-  /// Builds the add spots button
+  /// Builds add spots button (reused from original)
   Widget _buildAddSpotsButton() {
-    final canAddMore = _selectedSpots.length < _maxSpots;
+    final bool canAddMore = _selectedSpots.length < _maxSpots;
 
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
         onPressed: canAddMore ? _onAddSpots : null,
         icon: Icon(
-          Icons.add_location,
+          Icons.add_location_alt,
           color:
               canAddMore ? ColorAliases.primaryDefault : UIColors.iconPrimary,
         ),
@@ -362,12 +476,17 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
     );
   }
 
-  /// Builds spots validation error message
+  /// Builds spots validation error message (reused from original)
   Widget _buildSpotsValidationError() {
+    final String errorText =
+        widget.mode == PostCreationMode.listPost
+            ? 'Please add at least one spot to your list'
+            : 'Please add at least one spot to your post';
+
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Text(
-        'Please add at least one spot to your post',
+        errorText,
         style: Theme.of(
           context,
         ).textTheme.bodySmall?.copyWith(color: UIColors.textError),
@@ -375,7 +494,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
     );
   }
 
-  /// Builds error message display
+  /// Builds error message display (reused from original)
   Widget _buildErrorMessage(String errorMessage) {
     return Container(
       width: double.infinity,
@@ -403,22 +522,41 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
     );
   }
 
-  /// Builds loading overlay
+  /// Builds loading overlay (reused from original)
   Widget _buildLoadingOverlay() {
+    final String loadingText =
+        widget.mode == PostCreationMode.listPost
+            ? 'Criando lista...'
+            : 'Criando post...';
+
     return Container(
       color: Colors.black.withOpacity(0.3),
-      child: const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            ColorAliases.primaryDefault,
-          ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                ColorAliases.primaryDefault,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              loadingText,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   // =============================================================================
-  // VALIDATION METHODS
+  // VALIDATION METHODS (Reused from original)
   // =============================================================================
 
   /// Validates the title field
@@ -443,6 +581,9 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   /// Checks if the form can be submitted
   bool _canSubmit() {
     return _titleController.text.trim().isNotEmpty &&
+        _titleController.text.length <= _maxTitleLength &&
+        (_descriptionController.text.isEmpty ||
+            _descriptionController.text.length <= _maxDescriptionLength) &&
         _selectedSpots.isNotEmpty &&
         _selectedSpots.length <= _maxSpots;
   }
@@ -451,62 +592,86 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   // EVENT HANDLERS
   // =============================================================================
 
-  /// Handles cancel button press
-  void _onCancel() {
-    if (_hasUnsavedChanges()) {
-      _showCancelDialog();
-    } else {
-      Navigator.of(context).pop();
-    }
-  }
-
   /// Handles form submission
   void _onSubmit() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    // Clear local errors
+    setState(() {
+      _errorMessage = null;
+    });
 
-    if (_selectedSpots.isEmpty) {
+    // Validate form
+    if (!_formKey.currentState!.validate()) {
       setState(() {
-        _errorMessage = 'Please add at least one spot to your post';
+        _errorMessage = 'Please fix the errors above';
       });
       return;
     }
 
-    // Get PostsProvider
-    final postsProvider = Provider.of<PostsProvider>(context, listen: false);
+    // Check spots requirement
+    if (_selectedSpots.isEmpty) {
+      setState(() {
+        _errorMessage =
+            widget.mode == PostCreationMode.listPost
+                ? 'Please add at least one spot to your list'
+                : 'Please add at least one spot to your post';
+      });
+      return;
+    }
 
-    // Clear any previous errors
-    postsProvider.clearCreationError();
+    // Submit based on mode
+    bool success = false;
+    if (widget.mode == PostCreationMode.listPost) {
+      success = await _submitListPost();
+    } else {
+      success = await _submitCommunityPost();
+    }
 
-    // Create the community post
-    final success = await postsProvider.createCommunityPost(
-      title: _titleController.text.trim(),
-      description:
-          _descriptionController.text.trim().isNotEmpty
-              ? _descriptionController.text.trim()
-              : null,
-      userId: 3, // TODO: Get from actual logged-in user
-      selectedSpots: _selectedSpots,
-    );
-
-    if (mounted) {
-      if (success) {
-        // Post created successfully - navigate back
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Post created successfully!'),
-            backgroundColor: ColorAliases.successDefault,
-          ),
-        );
-      }
-      // Error handling is done through PostsProvider state
+    if (success && mounted) {
+      Navigator.of(context).pop();
+      _showSuccessSnackBar();
     }
   }
 
-  /// Handles adding spots
-  void _onAddSpots() {
+  /// Submits list post
+  Future<bool> _submitListPost() async {
+    final listPostsProvider = Provider.of<ListPostsProvider>(
+      context,
+      listen: false,
+    );
+
+    return await listPostsProvider.createListPost(
+      title: _titleController.text.trim(),
+      description:
+          _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
+      userId: _currentUserId,
+      selectedSpots: _selectedSpots,
+    );
+  }
+
+  /// Submits community post
+  Future<bool> _submitCommunityPost() async {
+    final postsProvider = Provider.of<PostsProvider>(context, listen: false);
+
+    return await postsProvider.createCommunityPost(
+      title: _titleController.text.trim(),
+      description:
+          _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
+      userId: _currentUserId,
+      selectedSpots: _selectedSpots,
+    );
+  }
+
+  /// Handles cancel action
+  void _onCancel() {
+    Navigator.of(context).pop();
+  }
+
+  /// Opens spot selection modal
+  void _onAddSpots() async {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder:
@@ -516,7 +681,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
               onSpotsSelected: (selectedSpots) {
                 setState(() {
                   _selectedSpots = selectedSpots;
-                  _errorMessage = null;
+                  _errorMessage = null; // Clear error when spots are selected
                 });
               },
             ),
@@ -531,61 +696,19 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
     });
   }
 
-  // =============================================================================
-  // HELPER METHODS
-  // =============================================================================
+  /// Shows success snackbar
+  void _showSuccessSnackBar() {
+    final String message =
+        widget.mode == PostCreationMode.listPost
+            ? 'Lista criada e compartilhada com sucesso!'
+            : 'Post criado com sucesso!';
 
-  /// Checks if there are unsaved changes
-  bool _hasUnsavedChanges() {
-    return _titleController.text.trim().isNotEmpty ||
-        _descriptionController.text.trim().isNotEmpty ||
-        _selectedSpots.isNotEmpty;
-  }
-
-  /// Shows cancel confirmation dialog
-  void _showCancelDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Discard post?'),
-            content: const Text(
-              'Your changes will be lost if you leave without saving.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Continue editing'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Close screen
-                },
-                child: const Text('Discard'),
-              ),
-            ],
-          ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
     );
-  }
-
-  /// Gets icon for spot category
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'praia':
-        return Icons.beach_access;
-      case 'cachoeira':
-        return Icons.water;
-      case 'montanha':
-        return Icons.landscape;
-      case 'parque nacional':
-        return Icons.park;
-      case 'centro histórico':
-        return Icons.account_balance;
-      case 'museu':
-        return Icons.museum;
-      default:
-        return Icons.place;
-    }
   }
 }

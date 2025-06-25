@@ -3,8 +3,8 @@ import 'screens/trending_screen.dart';
 import 'screens/minhas_viagens_screen.dart';
 import 'screens/comunidade_screen.dart';
 import 'screens/menu_screen.dart';
-import 'screens/post_creation_screen.dart'; // Import our new placeholder screen
-import 'widgets/speed_dial_fab.dart'; // Import our new SpeedDialFAB
+import 'screens/post_creation_screen.dart';
+import 'widgets/speed_dial_fab.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -17,7 +17,6 @@ class HomePage extends StatelessWidget {
         drawer: const MenuScreen(),
         appBar: AppBar(
           leading: Builder(
-            // Builder adicionado aqui
             builder:
                 (context) => IconButton(
                   icon: const Icon(Icons.menu, color: Colors.black),
@@ -56,34 +55,11 @@ class HomePage extends StatelessWidget {
             ),
 
             // Floating SpeedDial FAB positioned in bottom-right
-            Positioned(
-              bottom: 16,
-              right: 16,
-              child: SpeedDialFAB(
-                onCreatePost: () => _navigateToPostCreation(context),
-                onCreateList: () => _navigateToListCreation(context),
-              ),
-            ),
+            // Note: The new SpeedDialFAB handles its own navigation
+            const Positioned(bottom: 16, right: 16, child: SpeedDialFAB()),
           ],
         ),
       ),
     );
-  }
-
-  /// Navigates to the post creation screen as a full-screen modal
-  void _navigateToPostCreation(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const PostCreationScreen(),
-        fullscreenDialog: true, // This makes it open as a modal from bottom
-      ),
-    );
-  }
-
-  /// Navigates to the list creation screen as a full-screen modal
-  void _navigateToListCreation(BuildContext context) {
-    print("==================================================");
-    print("LISTA CRIACAO DE LISTAAAAA");
-    print("==================================================");
   }
 }

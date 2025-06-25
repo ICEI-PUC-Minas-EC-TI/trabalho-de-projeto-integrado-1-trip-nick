@@ -500,3 +500,199 @@ class ReviewPostData {
   String toString() =>
       'ReviewPostData(id: $post_id, spot: $spot_id, rating: $rating)';
 }
+
+/// Add these models to your existing create_post_request.dart file
+
+// =============================================================================
+// LIST POST MODELS
+// =============================================================================
+
+/// Request model for creating a list post
+@JsonSerializable()
+class CreateListPostRequest {
+  /// Post title (required, max 45 characters)
+  final String title;
+
+  /// Post description (optional, max 500 characters)
+  final String? description;
+
+  /// ID of user creating the post
+  final int user_id;
+
+  /// ID of the list being shared
+  final int list_id;
+
+  const CreateListPostRequest({
+    required this.title,
+    this.description,
+    required this.user_id,
+    required this.list_id,
+  });
+
+  /// Creates a CreateListPostRequest from JSON data
+  factory CreateListPostRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateListPostRequestFromJson(json);
+
+  /// Converts this request to JSON (for API calls)
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'list', // Backend expects this type
+      'title': title,
+      'description': description,
+      'user_id': user_id,
+      'list_id': list_id,
+    };
+  }
+
+  /// Validates the request data
+  List<String> validate() {
+    List<String> errors = [];
+
+    // Validate title
+    if (title.trim().isEmpty) {
+      errors.add('Title is required');
+    }
+    if (title.length > 45) {
+      errors.add('Title must be 45 characters or less');
+    }
+
+    // Validate description
+    if (description != null && description!.length > 500) {
+      errors.add('Description must be 500 characters or less');
+    }
+
+    // Validate user_id
+    if (user_id <= 0) {
+      errors.add('Valid user ID is required');
+    }
+
+    // Validate list_id
+    if (list_id <= 0) {
+      errors.add('Valid list ID is required');
+    }
+
+    return errors;
+  }
+
+  @override
+  String toString() {
+    return 'CreateListPostRequest(title: $title, user_id: $user_id, list_id: $list_id)';
+  }
+}
+
+/// Response model for list post creation
+@JsonSerializable()
+class CreateListPostResponse {
+  /// Whether the operation was successful
+  final bool success;
+
+  /// ID of the created post (if successful)
+  final int? post_id;
+
+  /// Success or error message
+  final String? message;
+
+  /// Error details (if any)
+  final String? error;
+
+  /// Additional data about the created list post
+  final ListPostData? data;
+
+  const CreateListPostResponse({
+    required this.success,
+    this.post_id,
+    this.message,
+    this.error,
+    this.data,
+  });
+
+  /// Creates a CreateListPostResponse from JSON data
+  factory CreateListPostResponse.fromJson(Map<String, dynamic> json) =>
+      _$CreateListPostResponseFromJson(json);
+
+  /// Converts this response to JSON
+  Map<String, dynamic> toJson() => _$CreateListPostResponseToJson(this);
+
+  @override
+  String toString() {
+    return 'CreateListPostResponse(success: $success, post_id: $post_id, message: $message)';
+  }
+}
+
+/// Data about a created list post
+@JsonSerializable()
+class ListPostData {
+  /// Post ID
+  final int post_id;
+
+  /// Post type (always "list")
+  final String type;
+
+  /// Post title
+  final String title;
+
+  /// Post description
+  final String? description;
+
+  /// User ID who created the post
+  final int user_id;
+
+  /// When the post was created
+  final DateTime created_date;
+
+  /// ID of the list being shared
+  final int list_id;
+
+  /// Name of the list being shared
+  final String list_name;
+
+  /// Whether the list is public (always true for list posts)
+  final bool is_public;
+
+  /// Number of spots in the list
+  final int spots_count;
+
+  const ListPostData({
+    required this.post_id,
+    required this.type,
+    required this.title,
+    this.description,
+    required this.user_id,
+    required this.created_date,
+    required this.list_id,
+    required this.list_name,
+    required this.is_public,
+    required this.spots_count,
+  });
+
+  /// Creates ListPostData from JSON data
+  factory ListPostData.fromJson(Map<String, dynamic> json) =>
+      _$ListPostDataFromJson(json);
+
+  /// Converts this data to JSON
+  Map<String, dynamic> toJson() => _$ListPostDataToJson(this);
+
+  /// Helper method to get display title
+  String get displayTitle => title.isNotEmpty ? title : 'Shared List';
+
+  /// Helper method to get display description
+  String get displayDescription =>
+      description?.isNotEmpty == true
+          ? description!
+          : 'Check out this amazing list of spots!';
+
+  /// Helper method to get list summary
+  String get listSummary => '$list_name ($spots_count spots)';
+
+  /// Helper method to check if post has description
+  bool get hasDescription => description?.isNotEmpty == true;
+
+  /// Helper method to get creation date formatted
+  String get formattedDate =>
+      created_date.toString().split(' ')[0]; // YYYY-MM-DD
+
+  @override
+  String toString() {
+    return 'ListPostData(post_id: $post_id, title: $title, list_id: $list_id, spots_count: $spots_count)';
+  }
+}

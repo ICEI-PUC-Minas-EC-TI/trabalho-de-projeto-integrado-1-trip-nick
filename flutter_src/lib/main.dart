@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_src/providers/lists_provider.dart';
 import 'package:provider/provider.dart';
 import 'screens/tela_login.dart';
 import 'design_system/theme.dart';
@@ -28,6 +29,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PostsProvider()),
 
         ChangeNotifierProvider(create: (context) => ReviewsProvider()),
+
+        ChangeNotifierProvider(create: (_) => ListPostsProvider()),
       ],
       child: MaterialApp(
         title: 'Trip Nick',
