@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../design_system/colors/ui_colors.dart';
 import '../design_system/colors/color_aliases.dart';
+import 'user_profile_screen.dart'; 
 
 class MenuScreen extends StatelessWidget {
   const MenuScreen({Key? key}) : super(key: key);
@@ -11,45 +12,54 @@ class MenuScreen extends StatelessWidget {
       backgroundColor: ColorAliases.white,
       child: Column(
         children: [
-          // Header with user info
+          // Header with user info (agora clicável)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 48, 16, 24),
             decoration: const BoxDecoration(
               color: ColorAliases.primaryDefault,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // User avatar
-                CircleAvatar(
-                  radius: 32,
-                  backgroundColor: ColorAliases.white,
-                  child: Icon(
-                    Icons.person,
-                    size: 40,
-                    color: ColorAliases.primaryDefault,
+            child: InkWell(
+              onTap: () {
+                Navigator.pop(context); // Fecha o drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const UserProfileScreen()),
+                );
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // User avatar
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: ColorAliases.white,
+                    child: Icon(
+                      Icons.person,
+                      size: 40,
+                      color: ColorAliases.primaryDefault,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // User name
-                Text(
-                  'user_name',
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: UIColors.textOnAction,
+                  // User name
+                  Text(
+                    'user_name',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: UIColors.textOnAction,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
+                  const SizedBox(height: 4),
 
-                // User level or description
-                Text(
-                  'Explorador Iniciante',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: UIColors.textOnAction.withOpacity(0.8),
+                  // User level or description
+                  Text(
+                    'Explorador Iniciante',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: UIColors.textOnAction.withOpacity(0.8),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -69,7 +79,13 @@ class MenuScreen extends StatelessWidget {
                   context: context,
                   icon: Icons.person,
                   title: 'Perfil',
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    Navigator.pop(context); // Fecha o drawer
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const UserProfileScreen()),
+                    );
+                  },
                 ),
                 _buildMenuItem(
                   context: context,
