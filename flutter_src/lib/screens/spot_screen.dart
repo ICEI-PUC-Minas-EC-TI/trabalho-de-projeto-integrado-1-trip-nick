@@ -11,6 +11,7 @@ class TouristSpotScreen extends StatelessWidget {
   final String category;
   final String description;
   final double rating;
+  final int spotId;
 
   const TouristSpotScreen({
     Key? key,
@@ -21,6 +22,7 @@ class TouristSpotScreen extends StatelessWidget {
     required this.category,
     required this.description,
     required this.rating,
+    required this.spotId,
   }) : super(key: key);
 
   @override
@@ -63,15 +65,16 @@ class TouristSpotScreen extends StatelessWidget {
                               width: 1,
                             ),
                           ),
-                          child: imageUrl.isNotEmpty
-                              ? Image.network(imageUrl, fit: BoxFit.cover)
-                              : const Center(
-                            child: Icon(
-                              Icons.image,
-                              size: 50,
-                              color: UIColors.iconPrimary,
-                            ),
-                          ),
+                          child:
+                              imageUrl.isNotEmpty
+                                  ? Image.network(imageUrl, fit: BoxFit.cover)
+                                  : const Center(
+                                    child: Icon(
+                                      Icons.image,
+                                      size: 50,
+                                      color: UIColors.iconPrimary,
+                                    ),
+                                  ),
                         ),
                       ),
                     ),
@@ -106,10 +109,7 @@ class TouristSpotScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 description,
-                style: const TextStyle(
-                  color: UIColors.textBody,
-                  fontSize: 16,
-                ),
+                style: const TextStyle(color: UIColors.textBody, fontSize: 16),
               ),
 
               const SizedBox(height: 32),
@@ -137,9 +137,10 @@ class TouristSpotScreen extends StatelessWidget {
                       int starIndex = index + 1;
                       return Icon(
                         Icons.star_rounded,
-                        color: rating >= starIndex
-                            ? ColorAliases.warningDefault
-                            : UIColors.iconPrimary,
+                        color:
+                            rating >= starIndex
+                                ? ColorAliases.warningDefault
+                                : UIColors.iconPrimary,
                         size: 32,
                       );
                     }),
@@ -165,10 +166,13 @@ class TouristSpotScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ReviewScreen(
-                          spotName: name,
-                          spotId: name,
-                        ),
+                        builder:
+                            (context) => ReviewScreen(
+                              spotName: name,
+                              spotId:
+                                  spotId
+                                      .toString(), // ← FIX: Convert spotId to string
+                            ),
                       ),
                     );
                   },
@@ -176,8 +180,10 @@ class TouristSpotScreen extends StatelessWidget {
                   label: const Text("Avaliar este local"),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
                     textStyle: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -220,10 +226,7 @@ class TouristSpotScreen extends StatelessWidget {
           ),
           child: Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              color: UIColors.textBody,
-            ),
+            style: const TextStyle(fontSize: 14, color: UIColors.textBody),
           ),
         ),
       ],

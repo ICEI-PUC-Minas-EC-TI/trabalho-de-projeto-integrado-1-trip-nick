@@ -7,6 +7,7 @@ import 'firebase_options.dart'; // gerado pelo Firebase CLI
 import 'services/api_service.dart';
 import 'providers/spots_provider.dart';
 import 'providers/posts_provider.dart'; // NEW: Import PostsProvider
+import 'providers/reviews_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SpotsProvider()),
 
         ChangeNotifierProvider(create: (_) => PostsProvider()),
+
+        ChangeNotifierProvider(create: (context) => ReviewsProvider()),
       ],
       child: MaterialApp(
         title: 'Trip Nick',

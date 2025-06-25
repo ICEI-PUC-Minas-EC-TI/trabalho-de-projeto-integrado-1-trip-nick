@@ -134,3 +134,66 @@ Map<String, dynamic> _$AddSpotToListRequestToJson(
   'spot_id': instance.spot_id,
   'list_thumbnail_id': instance.list_thumbnail_id,
 };
+
+CreateReviewPostRequest _$CreateReviewPostRequestFromJson(
+  Map<String, dynamic> json,
+) => CreateReviewPostRequest(
+  description: json['description'] as String,
+  user_id: (json['user_id'] as num).toInt(),
+  spot_id: (json['spot_id'] as num).toInt(),
+  rating: (json['rating'] as num).toDouble(),
+);
+
+Map<String, dynamic> _$CreateReviewPostRequestToJson(
+  CreateReviewPostRequest instance,
+) => <String, dynamic>{
+  'description': instance.description,
+  'user_id': instance.user_id,
+  'spot_id': instance.spot_id,
+  'rating': instance.rating,
+};
+
+CreateReviewPostResponse _$CreateReviewPostResponseFromJson(
+  Map<String, dynamic> json,
+) => CreateReviewPostResponse(
+  success: json['success'] as bool? ?? false,
+  post_id: (json['post_id'] as num?)?.toInt(),
+  message: json['message'] as String?,
+  error: json['error'] as String?,
+  data:
+      json['data'] == null
+          ? null
+          : ReviewPostData.fromJson(json['data'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$CreateReviewPostResponseToJson(
+  CreateReviewPostResponse instance,
+) => <String, dynamic>{
+  'success': instance.success,
+  'post_id': instance.post_id,
+  'message': instance.message,
+  'error': instance.error,
+  'data': instance.data,
+};
+
+ReviewPostData _$ReviewPostDataFromJson(Map<String, dynamic> json) =>
+    ReviewPostData(
+      post_id: (json['post_id'] as num).toInt(),
+      type: json['type'] as String,
+      description: json['description'] as String,
+      user_id: (json['user_id'] as num).toInt(),
+      created_date: DateTime.parse(json['created_date'] as String),
+      spot_id: (json['spot_id'] as num).toInt(),
+      rating: (json['rating'] as num).toDouble(),
+    );
+
+Map<String, dynamic> _$ReviewPostDataToJson(ReviewPostData instance) =>
+    <String, dynamic>{
+      'post_id': instance.post_id,
+      'type': instance.type,
+      'description': instance.description,
+      'user_id': instance.user_id,
+      'created_date': instance.created_date.toIso8601String(),
+      'spot_id': instance.spot_id,
+      'rating': instance.rating,
+    };

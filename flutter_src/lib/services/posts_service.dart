@@ -118,64 +118,6 @@ class PostsService {
   // OTHER POST TYPES (Future Implementation)
   // =============================================================================
 
-  /// Creates a review post for a specific spot
-  ///
-  /// Parameters:
-  /// - [spotId]: ID of the spot being reviewed
-  /// - [rating]: Rating from 1-5 stars
-  /// - [description]: Review description (optional)
-  /// - [userId]: ID of the user creating the review
-  ///
-  /// Returns:
-  /// - [Map<String, dynamic>]: API response with post details
-  Future<Map<String, dynamic>> createReviewPost({
-    required int spotId,
-    required int rating,
-    String? description,
-    required int userId,
-  }) async {
-    try {
-      // Validate input
-      if (spotId <= 0) {
-        throw ServerException('Valid spot ID is required');
-      }
-      if (rating < 1 || rating > 5) {
-        throw ServerException('Rating must be between 1 and 5');
-      }
-      if (userId <= 0) {
-        throw ServerException('Valid user ID is required');
-      }
-      if (description != null &&
-          description.length > PostConstants.maxDescriptionLength) {
-        throw ServerException('Description too long');
-      }
-
-      // Create request data
-      final requestData = {
-        'type': 'review',
-        'description': description,
-        'user_id': userId,
-        'spot_id': spotId,
-        'rating': rating,
-      };
-
-      // Make API call
-      final response = await _apiService.post(
-        ApiConstants.postsEndpoint,
-        body: requestData,
-      );
-
-      return response;
-    } catch (e) {
-      if (e is NetworkException ||
-          e is ServerException ||
-          e is NotFoundException) {
-        rethrow;
-      }
-      throw ServerException('Failed to create review post: ${e.toString()}');
-    }
-  }
-
   /// Creates a list post (sharing an existing list)
   ///
   /// Parameters:
@@ -721,6 +663,166 @@ class PostsService {
   /// Returns:
   /// - [int]: Maximum description length
   int get maxDescriptionLength => PostConstants.maxDescriptionLength;
+
+  Future<CreateReviewPostResponse> createReviewPost({
+    required int spotId,
+    required int rating,
+    String? description,
+    required int userId,
+  }) async {
+    try {
+      // Step 1: Validate input data
+      _validateReviewPostInput(spotId, rating, description, userId);
+
+      // Step 2: Create the review post request
+      final request = CreateReviewPostRequest.fromFormData(
+        spotId: spotId,
+        rating: rating,
+        description: description,
+        userId: userId,
+      );
+
+      print('PostsService: Creating review post for spot $spotId');
+
+      // Step 3: Create request data (using existing pattern)
+      final requestData = {
+        'type': 'review',
+        'description': request.description,
+        'user_id': request.user_id,
+        'spot_id': request.spot_id,
+        'rating': request.rating,
+      };
+
+      // Step 4: Make API call (using existing _apiService pattern)
+      final response = await _apiService.post(
+        ApiConstants.postsEndpoint,
+        body: requestData,
+      );
+
+      print('PostsService: Review post API response: ${response.toString()}');
+
+      // Step 5: Extract response data (following existing pattern)
+      int? postId;
+      String? createdDateStr;
+
+      // Try to extract post_id from different possible locations
+      if (response.containsKey('post_id')) {
+        postId = response['post_id'] as int?;
+      } else if (response.containsKey('data') && response['data'] is Map) {
+        final data = response['data'] as Map<String, dynamic>;
+        postId = data['post_id'] as int?;
+      }
+
+      // Try to extract created_date from different possible locations
+      if (response.containsKey('created_date')) {
+        createdDateStr = response['created_date'] as String?;
+      } else if (response.containsKey('data') && response['data'] is Map) {
+        final data = response['data'] as Map<String, dynamic>;
+        createdDateStr = data['created_date'] as String?;
+      }
+
+      // Validate we got the essential data
+      if (postId == null) {
+        throw ServerException(
+          'Missing post_id in API response. Response: ${response.toString()}',
+        );
+      }
+
+      if (createdDateStr == null) {
+        throw ServerException(
+          'Missing created_date in API response. Response: ${response.toString()}',
+        );
+      }
+
+      // Step 6: Return comprehensive response
+      return CreateReviewPostResponse(
+        success: true,
+        post_id: postId,
+        message: 'Avaliação criada com sucesso',
+        data: ReviewPostData(
+          post_id: postId,
+          type: 'review',
+          description: request.description,
+          user_id: request.user_id,
+          created_date: DateTime.parse(createdDateStr),
+          spot_id: request.spot_id,
+          rating: request.rating,
+        ),
+      );
+    } catch (e) {
+      print('PostsService: Error creating review post: $e');
+
+      if (e is NetworkException ||
+          e is ServerException ||
+          e is ValidationException ||
+          e is NotFoundException) {
+        rethrow;
+      }
+      throw ServerException('Failed to create review post: ${e.toString()}');
+    }
+  }
+
+  // =============================================================================
+  // REVIEW POST VALIDATION (Add these new methods)
+  // =============================================================================
+
+  /// Validates review post input data
+  ///
+  /// Throws [ValidationException] if data is invalid
+  void _validateReviewPostInput(
+    int spotId,
+    int rating,
+    String? description,
+    int userId,
+  ) {
+    // Validate spot ID
+    if (spotId <= 0) {
+      throw const ValidationException('ID do local é obrigatório');
+    }
+
+    // Validate rating
+    if (rating < 1 || rating > 5) {
+      throw const ValidationException(
+        'Avaliação deve ser entre 1 e 5 estrelas',
+      );
+    }
+
+    // Validate user ID
+    if (userId <= 0) {
+      throw const ValidationException('ID do usuário é obrigatório');
+    }
+
+    // Validate description length
+    if (description != null && description.length > 500) {
+      throw const ValidationException(
+        'Comentário não pode ter mais de 500 caracteres',
+      );
+    }
+
+    print('PostsService: Review post validation passed');
+  }
+
+  /// Get review post validation summary
+  Map<String, dynamic> getReviewPostValidationSummary({
+    required int spotId,
+    required int rating,
+    String? description,
+    required int userId,
+  }) {
+    return {
+      'valid_spot_id': spotId > 0,
+      'valid_rating': rating >= 1 && rating <= 5,
+      'valid_user_id': userId > 0,
+      'valid_description': description == null || description.length <= 500,
+      'description_length': description?.length ?? 0,
+      'is_valid':
+          spotId > 0 &&
+          rating >= 1 &&
+          rating <= 5 &&
+          userId > 0 &&
+          (description == null || description.length <= 500),
+    };
+  }
 
   // =============================================================================
   // DEBUGGING AND LOGGING HELPERS

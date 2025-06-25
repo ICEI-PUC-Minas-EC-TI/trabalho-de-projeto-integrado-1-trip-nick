@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import '../../utils/exceptions.dart';
 
 part 'create_post_request.g.dart';
 
@@ -332,4 +333,170 @@ class AddSpotToListRequest {
   String toString() {
     return 'AddSpotToListRequest(spot_id: $spot_id, list_thumbnail_id: $list_thumbnail_id)';
   }
+}
+
+/// Request model for creating review posts
+@JsonSerializable()
+class CreateReviewPostRequest {
+  final String description;
+  final int user_id;
+  final int spot_id;
+  final double rating;
+
+  const CreateReviewPostRequest({
+    required this.description,
+    required this.user_id,
+    required this.spot_id,
+    required this.rating,
+  });
+
+  /// Create from form data with validation
+  factory CreateReviewPostRequest.fromFormData({
+    required int spotId,
+    required int rating,
+    String? description,
+    required int userId,
+  }) {
+    // Validate rating
+    if (rating < 1 || rating > 5) {
+      throw ValidationException('Rating must be between 1 and 5');
+    }
+
+    // Validate spot ID
+    if (spotId <= 0) {
+      throw ValidationException('Invalid spot ID');
+    }
+
+    // Validate user ID
+    if (userId <= 0) {
+      throw ValidationException('Invalid user ID');
+    }
+
+    // Validate description length
+    final desc = description?.trim() ?? '';
+    if (desc.length > 500) {
+      throw ValidationException('Description cannot exceed 500 characters');
+    }
+
+    return CreateReviewPostRequest(
+      description: desc,
+      user_id: userId,
+      spot_id: spotId,
+      rating: rating.toDouble(),
+    );
+  }
+
+  /// Convert to JSON for API
+  Map<String, dynamic> toJson() => _$CreateReviewPostRequestToJson(this);
+
+  /// Create from JSON
+  factory CreateReviewPostRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateReviewPostRequestFromJson(json);
+
+  /// Validation method
+  bool isValid() {
+    return user_id > 0 &&
+        spot_id > 0 &&
+        rating >= 1.0 &&
+        rating <= 5.0 &&
+        description.length <= 500;
+  }
+
+  @override
+  String toString() =>
+      'CreateReviewPostRequest(spot: $spot_id, rating: $rating)';
+}
+
+/// Response model for review post creation
+@JsonSerializable()
+class CreateReviewPostResponse {
+  /// Indicates if the operation was successful
+  @JsonKey(name: 'success', defaultValue: false)
+  final bool success;
+
+  /// The created post ID
+  final int? post_id;
+
+  /// Success or error message
+  final String? message;
+
+  /// Error details (if any)
+  final String? error;
+
+  /// Additional data about the created review post
+  final ReviewPostData? data;
+
+  const CreateReviewPostResponse({
+    required this.success,
+    this.post_id,
+    this.message,
+    this.error,
+    this.data,
+  });
+
+  /// Create from JSON response
+  factory CreateReviewPostResponse.fromJson(Map<String, dynamic> json) =>
+      _$CreateReviewPostResponseFromJson(json);
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() => _$CreateReviewPostResponseToJson(this);
+
+  @override
+  String toString() =>
+      'CreateReviewPostResponse(id: $post_id, success: $success)';
+}
+
+/// Data model for review post details
+@JsonSerializable()
+class ReviewPostData {
+  final int post_id;
+  final String type;
+  final String description;
+  final int user_id;
+  final DateTime created_date;
+  final int spot_id;
+  final double rating;
+
+  const ReviewPostData({
+    required this.post_id,
+    required this.type,
+    required this.description,
+    required this.user_id,
+    required this.created_date,
+    required this.spot_id,
+    required this.rating,
+  });
+
+  /// Create from JSON
+  factory ReviewPostData.fromJson(Map<String, dynamic> json) =>
+      _$ReviewPostDataFromJson(json);
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() => _$ReviewPostDataToJson(this);
+
+  /// Get rating as integer for UI display
+  int get ratingAsInt => rating.round();
+
+  /// Get rating text for display
+  String get ratingText {
+    final stars = ratingAsInt;
+    return '$stars estrela${stars == 1 ? '' : 's'}';
+  }
+
+  /// Check if this is a positive review (4+ stars)
+  bool get isPositiveReview => rating >= 4.0;
+
+  /// Check if this is a negative review (2 or less stars)
+  bool get isNegativeReview => rating <= 2.0;
+
+  /// Get review sentiment text
+  String get reviewSentiment {
+    if (isPositiveReview) return 'Positiva';
+    if (isNegativeReview) return 'Negativa';
+    return 'Neutra';
+  }
+
+  @override
+  String toString() =>
+      'ReviewPostData(id: $post_id, spot: $spot_id, rating: $rating)';
 }
