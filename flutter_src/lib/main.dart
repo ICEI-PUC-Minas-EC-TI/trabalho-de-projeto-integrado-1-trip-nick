@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'screens/tela_login.dart';
 import 'package:provider/provider.dart';
+import 'screens/tela_login.dart';
 import 'design_system/theme.dart';
 import 'firebase_options.dart'; // gerado pelo Firebase CLI
-import 'providers/spots_provider.dart';
 import 'services/api_service.dart';
+import 'providers/spots_provider.dart';
+import 'providers/posts_provider.dart'; // NEW: Import PostsProvider
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,11 +22,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Add providers here - they'll be available throughout the app
         ChangeNotifierProvider(create: (_) => SpotsProvider()),
-        // Future providers will go here:
-        // ChangeNotifierProvider(create: (_) => PostsProvider()),
-        // ChangeNotifierProvider(create: (_) => ListsProvider()),
+
+        ChangeNotifierProvider(create: (_) => PostsProvider()),
       ],
       child: MaterialApp(
         title: 'Trip Nick',

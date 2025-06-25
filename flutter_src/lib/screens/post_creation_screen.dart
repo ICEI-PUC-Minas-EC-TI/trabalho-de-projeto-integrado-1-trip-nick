@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../design_system/colors/ui_colors.dart';
 import '../design_system/colors/color_aliases.dart';
 import '../models/core/spot.dart';
+import '../providers/posts_provider.dart';
 import '../widgets/spot_selection_widget.dart';
 
 /// Complete post creation screen for creating community posts
@@ -31,7 +32,6 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   List<Spot> _selectedSpots = [];
 
   // Form state
-  bool _isLoading = false;
   String? _errorMessage;
 
   // Constants
@@ -49,15 +49,19 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: UIColors.surfacePrimary,
-      appBar: _buildAppBar(),
-      body: _buildBody(),
+    return Consumer<PostsProvider>(
+      builder: (context, postsProvider, child) {
+        return Scaffold(
+          backgroundColor: UIColors.surfacePrimary,
+          appBar: _buildAppBar(postsProvider),
+          body: _buildBody(postsProvider),
+        );
+      },
     );
   }
 
   /// Builds the app bar with close button and submit action
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(PostsProvider postsProvider) {
     return AppBar(
       title: const Text('Create Post'),
       backgroundColor: ColorAliases.primaryDefault,
@@ -65,12 +69,13 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
       leading: IconButton(icon: const Icon(Icons.close), onPressed: _onCancel),
       actions: [
         TextButton(
-          onPressed: _canSubmit() ? _onSubmit : null,
+          onPressed:
+              _canSubmit() && !postsProvider.isCreatingPost ? _onSubmit : null,
           child: Text(
             'Post',
             style: TextStyle(
               color:
-                  _canSubmit()
+                  (_canSubmit() && !postsProvider.isCreatingPost)
                       ? UIColors.textOnAction
                       : UIColors.textOnAction.withOpacity(0.5),
               fontWeight: FontWeight.w600,
@@ -84,34 +89,44 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   }
 
   /// Builds the main body content
-  Widget _buildBody() {
-    return Form(
-      key: _formKey,
-      child: Column(
-        children: [
-          // Main form content (scrollable)
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildTitleSection(),
-                  const SizedBox(height: 24),
-                  _buildDescriptionSection(),
-                  const SizedBox(height: 24),
-                  _buildSpotsSection(),
-                  const SizedBox(height: 24),
-                  if (_errorMessage != null) _buildErrorMessage(),
-                ],
+  Widget _buildBody(PostsProvider postsProvider) {
+    return Stack(
+      children: [
+        Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Main form content (scrollable)
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTitleSection(),
+                      const SizedBox(height: 24),
+                      _buildDescriptionSection(),
+                      const SizedBox(height: 24),
+                      _buildSpotsSection(),
+                      const SizedBox(height: 24),
+                      // Show error from PostsProvider if any
+                      if (postsProvider.hasCreationError)
+                        _buildErrorMessage(postsProvider.creationErrorMessage!),
+                      // Show local error if any (for validation)
+                      if (_errorMessage != null &&
+                          !postsProvider.hasCreationError)
+                        _buildErrorMessage(_errorMessage!),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
+        ),
 
-          // Loading overlay
-          if (_isLoading) _buildLoadingOverlay(),
-        ],
-      ),
+        // Loading overlay (from PostsProvider state)
+        if (postsProvider.isCreatingPost) _buildLoadingOverlay(),
+      ],
     );
   }
 
@@ -361,10 +376,11 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   }
 
   /// Builds error message display
-  Widget _buildErrorMessage() {
+  Widget _buildErrorMessage(String errorMessage) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: UIColors.surfaceError,
         borderRadius: BorderRadius.circular(8),
@@ -376,7 +392,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              _errorMessage!,
+              errorMessage,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: UIColors.textError),
@@ -426,8 +442,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
 
   /// Checks if the form can be submitted
   bool _canSubmit() {
-    return !_isLoading &&
-        _titleController.text.trim().isNotEmpty &&
+    return _titleController.text.trim().isNotEmpty &&
         _selectedSpots.isNotEmpty &&
         _selectedSpots.length <= _maxSpots;
   }
@@ -458,17 +473,27 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    // Get PostsProvider
+    final postsProvider = Provider.of<PostsProvider>(context, listen: false);
 
-    try {
-      // TODO: Implement actual post creation logic in next step
-      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
+    // Clear any previous errors
+    postsProvider.clearCreationError();
 
-      if (mounted) {
-        Navigator.of(context).pop(); // Return to previous screen
+    // Create the community post
+    final success = await postsProvider.createCommunityPost(
+      title: _titleController.text.trim(),
+      description:
+          _descriptionController.text.trim().isNotEmpty
+              ? _descriptionController.text.trim()
+              : null,
+      userId: 3, // TODO: Get from actual logged-in user
+      selectedSpots: _selectedSpots,
+    );
+
+    if (mounted) {
+      if (success) {
+        // Post created successfully - navigate back
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Post created successfully!'),
@@ -476,18 +501,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
           ),
         );
       }
-    } catch (error) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Failed to create post. Please try again.';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      // Error handling is done through PostsProvider state
     }
   }
 

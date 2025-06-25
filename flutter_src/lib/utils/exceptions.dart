@@ -35,6 +35,11 @@ class TimeoutException extends ApiException {
   const TimeoutException(String message) : super(message);
 }
 
+/// Input validation errors
+class ValidationException extends ApiException {
+  const ValidationException(String message) : super(message, statusCode: 400);
+}
+
 /// Helper to convert HTTP status codes to appropriate exceptions
 class ExceptionHelper {
   static ApiException fromStatusCode(int statusCode, String message) {
