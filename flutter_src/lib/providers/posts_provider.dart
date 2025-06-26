@@ -231,14 +231,24 @@ class PostsProvider extends ChangeNotifier {
       );
 
       if (page == 1) {
-        // First page - replace all data
-        _communityPosts = response['posts'] ?? [];
+        // FIX: Properly cast the response
+        final posts = response['posts'];
+        if (posts != null) {
+          _communityPosts = List<Map<String, dynamic>>.from(
+            posts.map((post) => Map<String, dynamic>.from(post ?? {})),
+          );
+        } else {
+          _communityPosts = [];
+        }
       } else {
-        // Additional pages - append data
-        final newPosts = List<Map<String, dynamic>>.from(
-          response['posts'] ?? [],
-        );
-        _communityPosts.addAll(newPosts);
+        // FIX: Properly cast new posts for pagination
+        final posts = response['posts'];
+        if (posts != null) {
+          final newPosts = List<Map<String, dynamic>>.from(
+            posts.map((post) => Map<String, dynamic>.from(post ?? {})),
+          );
+          _communityPosts.addAll(newPosts);
+        }
       }
 
       _lastPostsUpdate = DateTime.now();
@@ -280,12 +290,24 @@ class PostsProvider extends ChangeNotifier {
       );
 
       if (page == 1) {
-        _allPosts = response['posts'] ?? [];
+        // FIX: Properly cast the response to List<Map<String, dynamic>>
+        final posts = response['posts'];
+        if (posts != null) {
+          _allPosts = List<Map<String, dynamic>>.from(
+            posts.map((post) => Map<String, dynamic>.from(post ?? {})),
+          );
+        } else {
+          _allPosts = [];
+        }
       } else {
-        final newPosts = List<Map<String, dynamic>>.from(
-          response['posts'] ?? [],
-        );
-        _allPosts.addAll(newPosts);
+        // FIX: Properly cast new posts for pagination
+        final posts = response['posts'];
+        if (posts != null) {
+          final newPosts = List<Map<String, dynamic>>.from(
+            posts.map((post) => Map<String, dynamic>.from(post ?? {})),
+          );
+          _allPosts.addAll(newPosts);
+        }
       }
 
       _lastPostsUpdate = DateTime.now();
