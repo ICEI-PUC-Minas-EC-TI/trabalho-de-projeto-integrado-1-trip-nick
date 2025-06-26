@@ -1,10 +1,16 @@
+//screens/comunidade_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'post_screen.dart';
 import '../design_system/colors/ui_colors.dart';
 import '../design_system/colors/color_aliases.dart';
 import '../providers/posts_provider.dart';
 import '../utils/constants.dart';
+import 'community_post_detail_screen.dart';
+import 'list_post_detail_screen.dart';
+import 'spot_screen.dart';
+
+// Note: Removed the PostDetailScreen class as it's now replaced by specific post detail screens
 
 class ComunidadeScreen extends StatefulWidget {
   const ComunidadeScreen({Key? key}) : super(key: key);
@@ -1076,25 +1082,70 @@ class _ComunidadeScreenState extends State<ComunidadeScreen> {
     }
   }
 
-  /// Navigate to post detail screen
+  /// Navigate to post detail screen - THIS IS THE KEY CHANGE
   void _navigateToPostDetail(Map<String, dynamic> postData) {
     final postType = postData['type'] ?? 'unknown';
 
-    // For now, use the existing PostScreen
-    // This can be enhanced later with specific screens for each post type
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => PostScreen(
-              title: _getPostTitle(postData),
-              username: _getUserName(postData),
-              imageUrl: '', // Will be enhanced with actual images later
-              description: postData['description'] ?? '',
-              datePosted: _parseDate(postData['created_date']),
-            ),
-      ),
-    );
+    switch (postType) {
+      case 'community':
+        // Navigate to community post detail screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CommunityPostDetailScreen(postData: postData),
+          ),
+        );
+        break;
+
+      case 'review':
+        // Navigate directly to the reviewed spot
+        final spotInfo = postData['spot'] ?? {};
+        final spotName = spotInfo['spot_name'] ?? 'Local';
+        final spotCategory = spotInfo['category'] ?? '';
+        final spotCity = spotInfo['city'] ?? '';
+        final spotCountry = spotInfo['country'] ?? '';
+        final spotDescription = spotInfo['description'] ?? '';
+        final spotImageUrl = _extractImageUrl(spotInfo);
+        final spotId = spotInfo['spot_id'] ?? spotInfo['id'] ?? 0;
+        final rating = (postData['rating'] ?? 0.0).toDouble();
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => TouristSpotScreen(
+                  name: spotName,
+                  imageUrl: spotImageUrl ?? '',
+                  country: spotCountry,
+                  city: spotCity,
+                  category: spotCategory,
+                  description: spotDescription,
+                  rating: rating,
+                  spotId: spotId,
+                ),
+          ),
+        );
+        break;
+
+      case 'list':
+        // Navigate to list post detail screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ListPostDetailScreen(postData: postData),
+          ),
+        );
+        break;
+
+      default:
+        // For unknown post types, show a simple message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tipo de post não suportado: $postType'),
+            backgroundColor: UIColors.iconError,
+          ),
+        );
+    }
   }
 
   /// Get post title based on type
